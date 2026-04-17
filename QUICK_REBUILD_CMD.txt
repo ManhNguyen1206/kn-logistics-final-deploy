@@ -1,0 +1,49 @@
+═══════════════════════════════════════════════════════════════════════════════
+QUICK REBUILD & REDEPLOY COMMAND
+═══════════════════════════════════════════════════════════════════════════════
+
+Run this from the Terminal in the kn-logistics-final-deploy folder:
+
+OPTION 1: Run the automated script
+──────────────────────────────────────────────────────────────────────────────
+bash REBUILD_AND_DEPLOY.sh
+
+OPTION 2: One-line manual rebuild
+──────────────────────────────────────────────────────────────────────────────
+rm -rf node_modules dist .vercel package-lock.json && npm install && npm run build && npx vercel --prod --yes
+
+OPTION 3: Step by step
+──────────────────────────────────────────────────────────────────────────────
+1. Clear caches:
+   rm -rf node_modules dist .vercel package-lock.json
+
+2. Install dependencies:
+   npm install
+
+3. Build:
+   npm run build
+
+4. Deploy:
+   npx vercel --prod --yes
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎯 Expected Results After Deploy:
+✅ Header with emerald-600 → teal-600 gradient
+✅ Yellow accent badges and buttons
+✅ White/slate minimalist background
+✅ Green tab highlights
+✅ Professional rounded styling
+
+⏱️ Full Process Takes: ~5 minutes
+   - npm install: 1-2 min
+   - build: 30 sec
+   - deploy: 1-2 min
+
+📱 After Deploy - FULL PAGE REFRESH REQUIRED:
+   macOS/Linux: Cmd+Shift+R
+   Windows: Ctrl+Shift+Delete
+
+🔗 Live URL: https://kn-logistics-final-deploy.vercel.app
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,55 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    LỆNH DEPLOY NHANH - MỘT DÒC LỆNH                           ║
+║            Cập nhật 2 tính năng + Build + Deploy Vercel                       ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+📝 SAO CHÉP & DÁN LỆNH DỰA ĐÂY VÀO TERMINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd ~/kn-logistics/kn-logistics-final-deploy && npm run build && npx vercel --prod --yes --force
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ THỜI GIAN THỰC THI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Build: ~1 phút
+   Deploy: ~2-3 phút
+   TOTAL: ~4 phút
+
+✅ LỆNH LÀM GÌ?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   1. Vào folder dự án
+   2. Build với các cập nhật mới
+   3. Deploy lên Vercel production
+   4. Force refresh CDN (--force flag)
+
+🎯 KẾT QUẢ SAU DEPLOY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ✅ Module "Hoá Đơn" (CUNGUNG):
+      - Hiển thị ngày nhập
+      - Hiển thị tên cửa hàng
+      - Hiển thị xe/tài xế
+
+   ✅ Module "Theo Dõi" (TRACKING):
+      - Sắp xếp mới nhất trên cùng (descending order)
+      - Hiển thị tên cửa hàng (thay vì r.creator)
+      - Hiển thị số lượng mặt hàng
+      - Hiển thị ngày và giờ riêng biệt
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✨ LƯỚI CHỌN: Bước nào bạn chưa làm?
+
+   [ ] Vẫn chưa sửa code?
+       → Code đã được cập nhật. Bạn chỉ cần chạy lệnh trên!
+
+   [ ] Chưa chạy lệnh?
+       → Hãy copy lệnh trên vào Terminal ngay!
+
+   [ ] Chạy xong, website vẫn cũ?
+       → Bấm Cmd+Shift+R (Mac) hoặc Ctrl+Shift+Delete (Windows)
+
+═══════════════════════════════════════════════════════════════════════════════

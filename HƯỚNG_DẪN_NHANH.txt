@@ -1,0 +1,142 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                     HƯỚNG DẪN NHANH - TIẾNG VIỆT                          ║
+║              Cập Nhật Thiết Kế KN-Logistics (Emerald + Yellow)            ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+🎯 TRẠNG THÁI HIỆN TẠI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Mã nguồn: Đã cập nhật design (emerald + yellow)
+❌ Website live: Vẫn chưa hiển thị design mới (cache Vercel)
+
+GIẢI PHÁP: Rebuild & Deploy lại
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 4 BƯỚC ĐẠI SƯ
+
+BƯỚC 1: Mở Terminal
+────────────────────────────────────────────────────────────────────────────
+   Mac/Linux: Cmd + Space → Gõ "Terminal" → Enter
+   Hoặc: Click biểu tượng Terminal trong Dock (thanh dưới cùng)
+
+BƯỚC 2: Điều Hướng Đến Thư Mục Dự Án
+────────────────────────────────────────────────────────────────────────────
+   Gõ lệnh này vào Terminal:
+
+   cd ~/kn-logistics/kn-logistics-final-deploy
+
+   Nhấn Enter
+
+BƯỚC 3: Chạy Lệnh Rebuild & Deploy
+────────────────────────────────────────────────────────────────────────────
+   Sao chép & dán lệnh dưới đây vào Terminal:
+
+   rm -rf node_modules dist .vercel package-lock.json && npm install && \
+   npm run build && npx vercel --prod --yes
+
+   Hoặc gõ từng dòng:
+
+   rm -rf node_modules dist .vercel package-lock.json
+   npm install
+   npm run build
+   npx vercel --prod --yes
+
+   Nhấn Enter và CHỜ
+
+BƯỚC 4: Kiểm Tra Kết Quả
+────────────────────────────────────────────────────────────────────────────
+   Khi xong, mở trình duyệt:
+   https://kn-logistics-final-deploy.vercel.app
+
+   Bạn sẽ thấy:
+   ✨ Header: Gradient xanh lá (emerald) → ngọc lam (teal)
+   ✨ Nút bấm: Vàng rực (yellow) trên xanh lá
+   ✨ Nền: Trắng/slate minimalist
+   ✨ Input: Viền xanh lá emerald
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ THỜI GIAN THỰC TỬ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   npm install ........... 1-2 phút
+   npm build ............. 30-60 giây
+   Vercel deploy ......... 1-2 phút
+   ─────────────────────────────────
+   TỔNG CỘNG ............. ~5 phút ⚡
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ DẤU HIỆU THÀNH CÔNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Trong Terminal, bạn sẽ thấy:
+
+   ✅ Build successful
+   ✅ npm run build completed
+   ✅ Deployment to Vercel initiated
+   ✅ https://kn-logistics-final-deploy.vercel.app [123s]
+
+Sau đó: Mở website → Thấy design xanh lá + vàng mới! 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆘 NẾU GẶP LỖI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ npm: command not found
+   → Tải Node.js từ https://nodejs.org (LTS version)
+
+❌ npm install fails
+   → Thử: npm install --legacy-peer-deps
+
+❌ Vercel: command not found
+   → Cài: npm install -g vercel
+
+❌ Not authenticated with Vercel
+   → Chạy: vercel login
+
+❌ Vẫn thấy design cũ sau deploy
+   → Bấm: Cmd+Shift+R (Mac) hoặc Ctrl+Shift+Delete (Windows)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 COMMAND TỪ ĐỦ (Copy & Paste Trực Tiếp)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+cd ~/kn-logistics/kn-logistics-final-deploy && rm -rf node_modules dist .vercel package-lock.json && npm install && npm run build && npx vercel --prod --yes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 ALTERNATIVE: DÙNG SCRIPT TỰ ĐỘNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   bash REBUILD_AND_DEPLOY.sh
+
+Script này sẽ tự động làm tất cả các bước trên.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎨 DESIGN CẬP NHẬT CÓ GÌ MỚI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Header:        Cũ: Xám → Mới: ✨ Gradient xanh lá → ngọc lam
+Nút bấm:       Cũ: Xanh → Mới: ✨ Vàng trên xanh lá
+Background:    Cũ: Trắng → Mới: ✨ Gradient nhẹ
+Input fields:  Cũ: Xám → Mới: ✨ Viền xanh lá
+Tổng thể:      Cũ: Đơn sơ → Mới: ✨ Minimalist chuyên nghiệp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ SẬN SÀNG?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Mở Terminal
+2. Paste lệnh ở trên
+3. Chờ ~5 phút
+4. Website update ngay! 🚀
+
+URL Live: https://kn-logistics-final-deploy.vercel.app
+
+═══════════════════════════════════════════════════════════════════════════════
