@@ -346,11 +346,11 @@ export default function App() {
 
   // Auto-auth accountant when they log in
   useEffect(() => {
-    if (loginUser?.role === 'accountant' && loginUser?.accountantStores && loginUser.accountantStores.length > 0 && !isMappingAuth) {
+    if (loginUser?.role === 'accountant' && loginUser?.accountantStores && loginUser.accountantStores.length > 0 && !isAccAuth) {
       setMyAccId(loginUser.id);
-      setIsMappingAuth(true);
+      setIsAccAuth(true);
     }
-  }, [loginUser, isMappingAuth]);
+  }, [loginUser, isAccAuth]);
 
   // Auto dismiss toast notification after 5 seconds
   useEffect(() => {
