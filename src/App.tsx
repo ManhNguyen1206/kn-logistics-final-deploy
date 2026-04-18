@@ -1011,13 +1011,13 @@ export default function App() {
               // Determine which tabs to show based on user role
               let visibleTabs: string[] = [];
               if (loginUser?.role === 'admin') {
-                visibleTabs = ['TRACKING', 'SOQUY', 'QUANLYTAIKHOAN', 'SETTINGS'];
+                visibleTabs = ['TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'accountant') {
                 visibleTabs = ['KETOAN', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'store_manager') {
                 visibleTabs = ['CUAHANG', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'supplier') {
-                visibleTabs = ['QUANLYHOADON', 'SETTINGS'];
+                visibleTabs = ['CUNGUNG', 'TRACKING', 'SETTINGS'];
               } else {
                 visibleTabs = ['CUNGUNG', 'TRACKING', 'SETTINGS'];
               }
@@ -1028,7 +1028,7 @@ export default function App() {
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${role === r ? 'bg-yellow-400 text-emerald-900 shadow-lg scale-105' : 'text-white hover:bg-white/20'}`}
                   onClick={() => setRole(r)}
                 >
-                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : r === 'QUANLYTAIKHOAN' ? 'QUẢN LÝ TÀI KHOẢN' : r === 'QUANLYHOADON' ? 'QUẢN LÝ HÓA ĐƠN' : 'KẾ TOÁN'}
+                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : 'KẾ TOÁN'}
                 </button>
               ));
             })()}
@@ -2180,20 +2180,7 @@ export default function App() {
           </div>
         )}
 
-        {/* QUẢN LÝ TÀI KHOẢN TAB - ADMIN ONLY */}
-        {role === 'QUANLYTAIKHOAN' && loginUser?.role === 'admin' && (
-          <div className="max-w-6xl mx-auto p-6">
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-xl shadow-lg">
-                <UserPlus className="w-6 h-6"/>
-                <div>
-                  <h2 className="text-2xl font-bold">Quản Lý Tài Khoản</h2>
-                  <p className="text-sm text-blue-100">Quản lý tài khoản kế toán, cửa hàng và cung ứng</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* QUẢN LÝ HÓA ĐƠN TAB - SUPPLIER ONLY (renamed from QUANLYHOADON) */}
                 {/* Quản lý Kế toán */}
                 <div className="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden flex flex-col">
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
