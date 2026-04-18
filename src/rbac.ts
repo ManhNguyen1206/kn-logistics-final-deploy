@@ -23,8 +23,7 @@ export interface PermissionCheck {
 // ============================================
 export const checkPermission = (
   user: User | null,
-  resourceStoreId: string,
-  resourceType: 'transaction' | 'fund_ledger' | 'follow_up'
+  resourceStoreId: string
 ): PermissionCheck => {
   if (!user) {
     return { canView: false, allowedStoreIds: [] };
