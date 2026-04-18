@@ -1,6 +1,8 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plus, Trash2, CheckCircle, Clock, Package, AlertCircle, FileText, ArrowRight, Database, RefreshCw, Lock, Unlock, UserPlus, MapPin, Download, FileUp, Paperclip, Upload, Settings, Bell, X } from 'lucide-react';
+import { getCurrentUser, filterDataByPermission, UserRole } from './rbac';
+import { RoleSelector } from './RoleSelector';
 
 // ============================================================================
 // BƯỚC 1: CẤU HÌNH DATABASE FIREBASE
@@ -136,11 +138,12 @@ const ProductSearch = ({ onSelect, products }: { onSelect: (p: Product) => void,
 };
 
 export default function App() {
-  const [role, setRole] = useState('CUAHANG'); 
+  const [role, setRole] = useState('CUAHANG');
   const [toastMsg, setToastMsg] = useState('');
   const [user, setUser] = useState<any>(null);
   const [isDBReady, setIsDBReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [testUserRole, setTestUserRole] = useState<UserRole>('admin');
 
   const [products, setProducts] = useState<Product[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -678,6 +681,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 font-sans pb-10 text-gray-800">
+      <RoleSelector currentRole={testUserRole} onRoleChange={(newRole) => { setTestUserRole(newRole); localStorage.setItem('userRole', newRole); }} />
       <style dangerouslySetInnerHTML={{__html: `
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1469,7 +1473,10 @@ export default function App() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium"><tr><th className="p-3">Mã Phiếu</th><th className="p-3">Cửa Hàng</th><th className="p-3">Thời Gian</th><th className="p-3">Trạng Thái</th><th className="p-3">Mã ERP</th><th className="p-3 text-center">Thao tác</th></tr></thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {receipts.filter(r => {
+                  {(() => {
+                    const currentUser = getCurrentUser();
+                    const filteredByPermission = filterDataByPermission(receipts, currentUser, 'storeId');
+                    return filteredByPermission.filter(r => {
                       const rDate = r.date.split(' ')[0];
                       const matchId = !filterReceiptId || r.id.toLowerCase().includes(filterReceiptId.toLowerCase());
                       return matchId &&
@@ -1477,7 +1484,7 @@ export default function App() {
                              (!filterAcc || r.accountantId === filterAcc) &&
                              (!filterStartDate || rDate >= filterStartDate) &&
                              (!filterEndDate || rDate <= filterEndDate);
-                  }).sort((a, b) => b.id.localeCompare(a.id)).map(r => {
+                    }).sort((a, b) => b.id.localeCompare(a.id)).map(r => {
                     const storeName = stores.find(s => s.id === r.storeId)?.name || r.creator;
                     const itemCount = r.items.length;
                     const [dateOnly, timeOnly] = r.date.split(' ');
@@ -1512,7 +1519,8 @@ export default function App() {
                       </td>
                     </tr>
                     );
-                  })}
+                    });
+                  })()}
                 </tbody>
               </table>
               {receipts.length === 0 && <div className="p-10 text-center text-gray-400 italic bg-white">Không có dữ liệu phù hợp</div>}
@@ -1568,10 +1576,13 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {transactions.filter(t => {
+                  {(() => {
+                    const currentUser = getCurrentUser();
+                    const filteredByPermission = filterDataByPermission(transactions, currentUser, 'storeId');
+                    return filteredByPermission.filter(t => {
                       const matchType = !filterTransactionType || t.type === filterTransactionType;
                       return matchType;
-                  }).sort((a, b) => b.date.localeCompare(a.date)).map(t => (
+                    }).sort((a, b) => b.date.localeCompare(a.date)).map(t => (
                     <tr key={t.id} className={`hover:bg-gray-50 group ${t.type === 'chi' ? 'bg-red-50' : 'bg-green-50'}`}>
                       <td className="p-3 font-mono font-bold text-emerald-600">{t.id}</td>
                       <td className="p-3">
@@ -1594,10 +1605,15 @@ export default function App() {
                       </td>
                       <td className="p-3 text-gray-600 text-xs max-w-xs truncate" title={t.note}>{t.note || '-'}</td>
                     </tr>
-                  ))}
+                    ));
+                  })()}
                 </tbody>
               </table>
-              {transactions.filter(t => !filterTransactionType || t.type === filterTransactionType).length === 0 && (
+              {(() => {
+                const currentUser = getCurrentUser();
+                const filteredByPermission = filterDataByPermission(transactions, currentUser, 'storeId');
+                return filteredByPermission.filter(t => !filterTransactionType || t.type === filterTransactionType).length === 0;
+              })() && (
                 <div className="p-10 text-center text-gray-400 italic bg-white">Không có dữ liệu phù hợp</div>
               )}
             </div>
