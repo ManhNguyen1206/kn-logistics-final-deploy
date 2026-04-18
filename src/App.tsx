@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plus, Trash2, CheckCircle, Clock, Package, AlertCircle, FileText, ArrowRight, Database, RefreshCw, Lock, Unlock, UserPlus, MapPin, Download, FileUp, Paperclip, Upload, Settings, Bell, X } from 'lucide-react';
-import { getCurrentUser, filterDataByPermission, UserRole } from './rbac';
-import { RoleSelector } from './RoleSelector';
+import { getCurrentUser, filterDataByPermission, UserRole, validateLogin, getUsernamesByRole } from './rbac';
+import type { User } from './rbac';
 
 // ============================================================================
 // BƯỚC 1: CẤU HÌNH DATABASE FIREBASE
@@ -138,6 +138,14 @@ const ProductSearch = ({ onSelect, products }: { onSelect: (p: Product) => void,
 };
 
 export default function App() {
+  // LOGIN SYSTEM
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginUser, setLoginUser] = useState<User | null>(null);
+  const [loginRole, setLoginRole] = useState<UserRole>('admin');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   const [role, setRole] = useState('CUAHANG');
   const [toastMsg, setToastMsg] = useState('');
   const [user, setUser] = useState<any>(null);
@@ -216,6 +224,20 @@ export default function App() {
   const [keToanTabIndex, setKeToanTabIndex] = useState(0); // 0: Nhập hàng, 1: Chi/Thu
   const [filterTransactionType, setFilterTransactionType] = useState('');
 
+  // Check for existing login on mount
+  useEffect(() => {
+    const loginData = localStorage.getItem('loginData');
+    if (loginData) {
+      try {
+        const userData = JSON.parse(loginData);
+        setLoginUser(userData);
+        setIsLoggedIn(true);
+      } catch (e) {
+        localStorage.removeItem('loginData');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     signInAnonymously(auth).catch(err => console.error("Lỗi Auth:", err));
     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -283,6 +305,39 @@ export default function App() {
   }, [toastNotification]);
 
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 4000); };
+
+  // LOGIN HANDLER
+  const handleLogin = () => {
+    setLoginError('');
+    if (!loginUsername || !loginPassword) {
+      setLoginError('Vui lòng nhập đầy đủ thông tin!');
+      return;
+    }
+
+    const validatedUser = validateLogin(loginRole, loginUsername, loginPassword);
+    if (!validatedUser) {
+      setLoginError('Sai tên đăng nhập hoặc mật khẩu!');
+      return;
+    }
+
+    setLoginUser(validatedUser);
+    setIsLoggedIn(true);
+    localStorage.setItem('loginData', JSON.stringify(validatedUser));
+    setLoginUsername('');
+    setLoginPassword('');
+    showToast(`✅ Đăng nhập thành công! Xin chào ${validatedUser.name}`);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setLoginUser(null);
+    setLoginRole('admin');
+    setLoginUsername('');
+    setLoginPassword('');
+    setLoginError('');
+    localStorage.removeItem('loginData');
+    showToast('✅ Đã đăng xuất!');
+  };
 
   const handleMarkNotificationAsRead = async (notifId: string) => {
     if (!user) return;
@@ -772,6 +827,97 @@ export default function App() {
         </div>
       )}
 
+      {/* LOGIN PAGE - Show if not logged in */}
+      {!isLoggedIn ? (
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-emerald-100">
+              {/* Logo */}
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg mx-auto mb-4">
+                  <Package className="w-8 h-8 text-white" />
+                </div>
+                <h1 className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">KN-Logistics</h1>
+                <p className="text-gray-500 text-sm mt-2">Hệ thống quản lý chuỗi cung ứng</p>
+              </div>
+
+              {/* Login Form */}
+              <div className="space-y-4">
+                {/* Role Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Vai trò</label>
+                  <select
+                    value={loginRole}
+                    onChange={(e) => {
+                      setLoginRole(e.target.value as UserRole);
+                      setLoginUsername('');
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-gray-800"
+                  >
+                    <option value="admin">Quản trị viên</option>
+                    <option value="accountant">Kế toán</option>
+                    <option value="store_manager">Cửa hàng</option>
+                  </select>
+                </div>
+
+                {/* Username Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tên đăng nhập</label>
+                  <select
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-gray-800"
+                  >
+                    <option value="">-- Chọn tên --</option>
+                    {getUsernamesByRole(loginRole).map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Password Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mật khẩu</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                    placeholder="Nhập mật khẩu"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-gray-800"
+                  />
+                </div>
+
+                {/* Error Message */}
+                {loginError && (
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-red-700 text-sm font-medium">
+                    ❌ {loginError}
+                  </div>
+                )}
+
+                {/* Login Button */}
+                <button
+                  onClick={handleLogin}
+                  className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg font-bold hover:shadow-lg transition-all active:scale-95"
+                >
+                  Đăng Nhập
+                </button>
+              </div>
+
+              {/* Demo Credentials */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-xs text-gray-600 font-medium mb-3">📝 Tài khoản demo:</p>
+                <div className="space-y-2 text-xs text-gray-600">
+                  <div><span className="font-medium">Admin:</span> admin / admin123</div>
+                  <div><span className="font-medium">Kế toán:</span> Sang, Minh, Yến / 123</div>
+                  <div><span className="font-medium">Cửa hàng:</span> Phước Long, Phú Sơn, BomBo / 123</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* HEADER */}
       <header className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
@@ -843,6 +989,23 @@ export default function App() {
               </div>
             )}
           </div>
+
+          {/* USER INFO & LOGOUT */}
+          {isLoggedIn && loginUser && (
+            <div className="flex items-center gap-3 pl-3 border-l border-white/30">
+              <div className="text-right">
+                <div className="text-sm font-semibold text-white">{loginUser.name}</div>
+                <div className="text-xs text-white/80">{loginUser.role === 'admin' ? 'Quản trị viên' : loginUser.role === 'accountant' ? 'Kế toán' : 'Cửa hàng'}</div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-red-500/30 rounded-lg transition-colors text-white"
+                title="Đăng xuất"
+              >
+                <Unlock className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -2058,6 +2221,8 @@ export default function App() {
         )}
 
       </main>
+        </>
+      )}
     </div>
   );
 }

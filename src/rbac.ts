@@ -74,34 +74,93 @@ export const filterDataByPermission = (
 };
 
 // ============================================
-// Mock Current User (để test)
+// Get Current User from Login
 // ============================================
-export const getCurrentUser = (): User => {
-  // Trong production: lấy từ Firebase Auth + Firestore user document
-  // Hiện tại: mock data
-  const userRole = localStorage.getItem('userRole') as UserRole || 'admin';
-  
-  const users: Record<UserRole, User> = {
-    admin: {
-      id: 'admin-001',
-      name: 'Quản trị viên',
-      role: 'admin',
-    },
-    store_manager: {
-      id: 'sm-001',
-      name: 'Quản lý Cửa hàng BomBo',
-      role: 'store_manager',
-      storeIds: ['cua-hang-bombo'],
-    },
-    accountant: {
-      id: 'acc-001',
-      name: 'Kế toán Linh',
-      role: 'accountant',
-      accountantStores: ['cua-hang-bombo', 'cua-hang-khac'],
-    },
+export const getCurrentUser = (): User | null => {
+  const loginData = localStorage.getItem('loginData');
+  if (!loginData) return null;
+
+  try {
+    const data = JSON.parse(loginData);
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+// ============================================
+// Validate Login Credentials
+// ============================================
+export const validateLogin = (role: UserRole, username: string, password: string): User | null => {
+  // Admin
+  if (role === 'admin') {
+    if (username === 'admin' && password === 'admin123') {
+      return {
+        id: 'admin-001',
+        name: 'Quản trị viên',
+        role: 'admin',
+      };
+    }
+    return null;
+  }
+
+  // Accountants
+  const accountants: Record<string, { id: string; name: string; password: string; storeIds: string[] }> = {
+    'sang': { id: 'KT_SANG', name: 'Sang', password: '123', storeIds: ['CH_PHUOCLONG'] },
+    'minh': { id: 'KT_MINH', name: 'Minh', password: '123', storeIds: ['CH_PHUSON'] },
+    'yen': { id: 'KT_YEN', name: 'Yến', password: '123', storeIds: ['CH_BOMBO'] },
   };
 
-  return users[userRole];
+  if (role === 'accountant') {
+    const acc = accountants[username.toLowerCase()];
+    if (acc && acc.password === password) {
+      return {
+        id: acc.id,
+        name: acc.name,
+        role: 'accountant',
+        accountantStores: acc.storeIds,
+      };
+    }
+    return null;
+  }
+
+  // Stores
+  const stores: Record<string, { id: string; name: string; password: string }> = {
+    'phuoc-long': { id: 'CH_PHUOCLONG', name: 'Cửa hàng Phước Long', password: '123' },
+    'phu-son': { id: 'CH_PHUSON', name: 'Cửa hàng Phú Sơn', password: '123' },
+    'bombo': { id: 'CH_BOMBO', name: 'Cửa hàng BomBo', password: '123' },
+  };
+
+  if (role === 'store_manager') {
+    const store = stores[username.toLowerCase()];
+    if (store && store.password === password) {
+      return {
+        id: store.id,
+        name: store.name,
+        role: 'store_manager',
+        storeIds: [store.id],
+      };
+    }
+    return null;
+  }
+
+  return null;
+};
+
+// ============================================
+// Get Usernames by Role
+// ============================================
+export const getUsernamesByRole = (role: UserRole): string[] => {
+  if (role === 'admin') {
+    return ['admin'];
+  }
+  if (role === 'accountant') {
+    return ['Sang', 'Minh', 'Yến'];
+  }
+  if (role === 'store_manager') {
+    return ['Phước Long', 'Phú Sơn', 'BomBo'];
+  }
+  return [];
 };
 
 // ============================================
