@@ -95,12 +95,12 @@ export const getCurrentUser = (): User | null => {
 };
 
 // ============================================
-// Validate Login Credentials
+// Validate Login Credentials (supports both name and ID)
 // ============================================
-export const validateLogin = (role: UserRole, username: string, password: string): User | null => {
+export const validateLogin = (role: UserRole, usernameOrId: string, password: string): User | null => {
   // Admin
   if (role === 'admin') {
-    if (username === 'admin' && password === 'admin123') {
+    if ((usernameOrId === 'admin' || usernameOrId === 'admin-001') && password === 'admin123') {
       return {
         id: 'admin-001',
         name: 'Quản trị viên',
@@ -110,15 +110,25 @@ export const validateLogin = (role: UserRole, username: string, password: string
     return null;
   }
 
-  // Accountants
+  // Accountants - support both name and ID lookup
   const accountants: Record<string, { id: string; name: string; password: string; storeIds: string[] }> = {
     'sang': { id: 'KT_SANG', name: 'Sang', password: '123', storeIds: ['CH_PHUOCLONG'] },
     'minh': { id: 'KT_MINH', name: 'Minh', password: '123', storeIds: ['CH_PHUSON'] },
     'yen': { id: 'KT_YEN', name: 'Yến', password: '123', storeIds: ['CH_BOMBO'] },
   };
 
+  const accountantsById: Record<string, { id: string; name: string; password: string; storeIds: string[] }> = {
+    'KT_SANG': { id: 'KT_SANG', name: 'Sang', password: '123', storeIds: ['CH_PHUOCLONG'] },
+    'KT_MINH': { id: 'KT_MINH', name: 'Minh', password: '123', storeIds: ['CH_PHUSON'] },
+    'KT_YEN': { id: 'KT_YEN', name: 'Yến', password: '123', storeIds: ['CH_BOMBO'] },
+  };
+
   if (role === 'accountant') {
-    const acc = accountants[username.toLowerCase()];
+    // Try ID lookup first
+    let acc = accountantsById[usernameOrId.toUpperCase()];
+    // If not found, try name lookup
+    if (!acc) acc = accountants[usernameOrId.toLowerCase()];
+
     if (acc && acc.password === password) {
       return {
         id: acc.id,
@@ -130,23 +140,34 @@ export const validateLogin = (role: UserRole, username: string, password: string
     return null;
   }
 
-  // Stores
+  // Stores - support both name and ID lookup
   const stores: Record<string, { id: string; name: string; password: string }> = {
     'phuoc-long': { id: 'CH_PHUOCLONG', name: 'Cửa hàng Phước Long', password: '123' },
     'phu-son': { id: 'CH_PHUSON', name: 'Cửa hàng Phú Sơn', password: '123' },
     'bombo': { id: 'CH_BOMBO', name: 'Cửa hàng BomBo', password: '123' },
   };
 
-  if (role === 'store_manager') {
-    // Map display names to store keys
-    const displayToKey: Record<string, string> = {
-      'Phước Long': 'phuoc-long',
-      'Phú Sơn': 'phu-son',
-      'BomBo': 'bombo',
-    };
+  const storesById: Record<string, { id: string; name: string; password: string }> = {
+    'CH_PHUOCLONG': { id: 'CH_PHUOCLONG', name: 'Cửa hàng Phước Long', password: '123' },
+    'CH_PHUSON': { id: 'CH_PHUSON', name: 'Cửa hàng Phú Sơn', password: '123' },
+    'CH_BOMBO': { id: 'CH_BOMBO', name: 'Cửa hàng BomBo', password: '123' },
+  };
 
-    const key = displayToKey[username] || username.toLowerCase().replace(/\s+/g, '-');
-    const store = stores[key];
+  if (role === 'store_manager') {
+    // Try ID lookup first
+    let store = storesById[usernameOrId.toUpperCase()];
+
+    // If not found, try display name lookup
+    if (!store) {
+      const displayToKey: Record<string, string> = {
+        'Phước Long': 'phuoc-long',
+        'Phú Sơn': 'phu-son',
+        'BomBo': 'bombo',
+      };
+      const key = displayToKey[usernameOrId] || usernameOrId.toLowerCase().replace(/\s+/g, '-');
+      store = stores[key];
+    }
+
     if (store && store.password === password) {
       return {
         id: store.id,
@@ -158,16 +179,28 @@ export const validateLogin = (role: UserRole, username: string, password: string
     return null;
   }
 
-  // Suppliers
+  // Suppliers - support both name and ID lookup
   const suppliers: Record<string, { id: string; name: string; password: string }> = {
     'supplier1': { id: 'SUP_001', name: 'Supplier 1', password: '123' },
     'supplier2': { id: 'SUP_002', name: 'Supplier 2', password: '123' },
     'supplier3': { id: 'SUP_003', name: 'Supplier 3', password: '123' },
   };
 
+  const suppliersById: Record<string, { id: string; name: string; password: string }> = {
+    'SUP_001': { id: 'SUP_001', name: 'Supplier 1', password: '123' },
+    'SUP_002': { id: 'SUP_002', name: 'Supplier 2', password: '123' },
+    'SUP_003': { id: 'SUP_003', name: 'Supplier 3', password: '123' },
+  };
+
   if (role === 'supplier') {
-    const supplierKey = username.toLowerCase().replace(/\s+/g, '');
-    const supplier = suppliers[supplierKey];
+    // Try ID lookup first
+    let supplier = suppliersById[usernameOrId.toUpperCase()];
+    // If not found, try name lookup
+    if (!supplier) {
+      const supplierKey = usernameOrId.toLowerCase().replace(/\s+/g, '');
+      supplier = suppliers[supplierKey];
+    }
+
     if (supplier && supplier.password === password) {
       return {
         id: supplier.id,
@@ -183,7 +216,7 @@ export const validateLogin = (role: UserRole, username: string, password: string
 };
 
 // ============================================
-// Get Usernames by Role
+// Get Usernames by Role (for backward compatibility)
 // ============================================
 export const getUsernamesByRole = (role: UserRole): string[] => {
   if (role === 'admin') {
@@ -197,6 +230,37 @@ export const getUsernamesByRole = (role: UserRole): string[] => {
   }
   if (role === 'supplier') {
     return ['Supplier 1', 'Supplier 2', 'Supplier 3'];
+  }
+  return [];
+};
+
+// ============================================
+// Get IDs by Role (for new ID-based login)
+// ============================================
+export const getIdsByRole = (role: UserRole): Array<{ id: string; name: string }> => {
+  if (role === 'admin') {
+    return [{ id: 'admin-001', name: 'Quản trị viên' }];
+  }
+  if (role === 'accountant') {
+    return [
+      { id: 'KT_SANG', name: 'Sang' },
+      { id: 'KT_MINH', name: 'Minh' },
+      { id: 'KT_YEN', name: 'Yến' },
+    ];
+  }
+  if (role === 'store_manager') {
+    return [
+      { id: 'CH_PHUOCLONG', name: 'Cửa hàng Phước Long' },
+      { id: 'CH_PHUSON', name: 'Cửa hàng Phú Sơn' },
+      { id: 'CH_BOMBO', name: 'Cửa hàng BomBo' },
+    ];
+  }
+  if (role === 'supplier') {
+    return [
+      { id: 'SUP_001', name: 'Supplier 1' },
+      { id: 'SUP_002', name: 'Supplier 2' },
+      { id: 'SUP_003', name: 'Supplier 3' },
+    ];
   }
   return [];
 };

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Plus, Trash2, CheckCircle, Clock, Package, AlertCircle, FileText, ArrowRight, Database, RefreshCw, Lock, Unlock, UserPlus, MapPin, Download, FileUp, Paperclip, Upload, Settings, Bell, X } from 'lucide-react';
-import { getCurrentUser, filterDataByPermission, UserRole, validateLogin, getUsernamesByRole } from './rbac';
+import { getCurrentUser, filterDataByPermission, UserRole, validateLogin, getUsernamesByRole, getIdsByRole } from './rbac';
 import type { User } from './rbac';
 
 // ============================================================================
@@ -204,6 +204,7 @@ export default function App() {
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterReceiptId, setFilterReceiptId] = useState('');
+  const [filterReceiptStatus, setFilterReceiptStatus] = useState('');
 
   // NEW FEATURES
   const [selectedReceiptModal, setSelectedReceiptModal] = useState<Receipt | null>(null);
@@ -342,6 +343,14 @@ export default function App() {
       setIsStoreAuth(true);
     }
   }, [loginUser, isStoreAuth]);
+
+  // Auto-auth accountant when they log in
+  useEffect(() => {
+    if (loginUser?.role === 'accountant' && loginUser?.accountantStores && loginUser.accountantStores.length > 0 && !isMappingAuth) {
+      setMyAccId(loginUser.id);
+      setIsMappingAuth(true);
+    }
+  }, [loginUser, isMappingAuth]);
 
   // Auto dismiss toast notification after 5 seconds
   useEffect(() => {
@@ -927,19 +936,32 @@ export default function App() {
                   </select>
                 </div>
 
-                {/* Username Selector */}
+                {/* ID Input - New scalable approach */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tên đăng nhập</label>
-                  <select
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mã nhân viên / Cửa hàng</label>
+                  <input
+                    type="text"
                     value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-gray-800"
-                  >
-                    <option value="">-- Chọn tên --</option>
-                    {getUsernamesByRole(loginRole).map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                    onChange={(e) => setLoginUsername(e.target.value.toUpperCase())}
+                    placeholder="Nhập ID (VD: CH_PHUOCLONG, KT_SANG)"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-gray-800 uppercase"
+                  />
+                  {loginUsername && (
+                    <div className="mt-2 space-y-1 text-xs">
+                      {getIdsByRole(loginRole)
+                        .filter(item => item.id.includes(loginUsername))
+                        .map(item => (
+                          <div
+                            key={item.id}
+                            onClick={() => setLoginUsername(item.id)}
+                            className="p-2 bg-emerald-50 hover:bg-emerald-100 cursor-pointer rounded border border-emerald-200 transition-colors"
+                          >
+                            <div className="font-medium text-emerald-700">{item.id}</div>
+                            <div className="text-gray-600">{item.name}</div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Password Input */}
@@ -993,7 +1015,7 @@ export default function App() {
               } else if (loginUser?.role === 'accountant') {
                 visibleTabs = ['KETOAN', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'store_manager') {
-                visibleTabs = ['CUAHANG', 'SOQUY', 'SETTINGS'];
+                visibleTabs = ['CUAHANG', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'supplier') {
                 visibleTabs = ['QUANLYHOADON', 'SETTINGS'];
               } else {
@@ -1759,8 +1781,8 @@ export default function App() {
                 <p className="text-sm text-gray-500 mt-1">Báo cáo lịch sử giao dịch kho</p>
               </div>
               <div className="flex items-center gap-2">
-                {(filterReceiptId || filterStore || filterAcc || filterStartDate || filterEndDate) && (
-                  <button onClick={() => { setFilterReceiptId(''); setFilterStore(''); setFilterAcc(''); setFilterStartDate(''); setFilterEndDate(''); }} className="text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-2 rounded-lg font-medium transition-colors">Xóa bộ lọc</button>
+                {(filterReceiptId || filterStore || filterAcc || filterStartDate || filterEndDate || filterReceiptStatus) && (
+                  <button onClick={() => { setFilterReceiptId(''); setFilterStore(''); setFilterAcc(''); setFilterStartDate(''); setFilterEndDate(''); setFilterReceiptStatus(''); }} className="text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-2 rounded-lg font-medium transition-colors">Xóa bộ lọc</button>
                 )}
                 <button onClick={() => {
                     let csv = "\uFEFFMã Phiếu,Cửa Hàng,Thời Gian,Trạng Thái,Mã ERP\n";
@@ -1772,7 +1794,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Tìm mã phiếu</label>
                 <input type="text" placeholder="Nhập mã..." className="w-full p-2 border border-gray-300 rounded bg-white text-sm outline-none focus:border-gray-400" value={filterReceiptId} onChange={e => setFilterReceiptId(e.target.value)} />
@@ -1784,6 +1806,10 @@ export default function App() {
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Kế toán</label>
                 <select className="w-full p-2 border border-gray-300 rounded bg-white text-sm outline-none" value={filterAcc} onChange={e => setFilterAcc(e.target.value)}><option value="">-- Tất cả --</option>{accountants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Trạng thái</label>
+                <select className="w-full p-2 border border-gray-300 rounded bg-white text-sm outline-none" value={filterReceiptStatus} onChange={e => setFilterReceiptStatus(e.target.value)}><option value="">-- Tất cả --</option>{Object.values(STATUSES).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Từ ngày</label>
@@ -1806,6 +1832,7 @@ export default function App() {
                       return matchId &&
                              (!filterStore || r.storeId === filterStore) &&
                              (!filterAcc || r.accountantId === filterAcc) &&
+                             (!filterReceiptStatus || r.status === filterReceiptStatus) &&
                              (!filterStartDate || rDate >= filterStartDate) &&
                              (!filterEndDate || rDate <= filterEndDate);
                   }).sort((a, b) => b.id.localeCompare(a.id)).map(r => {
