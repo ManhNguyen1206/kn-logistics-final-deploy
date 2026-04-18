@@ -1653,8 +1653,6 @@ export default function App() {
                      <div className="font-medium text-gray-500">Không có yêu cầu tải hóa đơn nào.</div>
                    </div>
                 )}
-              </div>
-            )}
 
                 {/* TAB 2: YÊU CẦU HÓA ĐƠN */}
                 {keToanTabIndex === 2 && (
