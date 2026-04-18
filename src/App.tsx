@@ -1473,10 +1473,7 @@ export default function App() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium"><tr><th className="p-3">Mã Phiếu</th><th className="p-3">Cửa Hàng</th><th className="p-3">Thời Gian</th><th className="p-3">Trạng Thái</th><th className="p-3">Mã ERP</th><th className="p-3 text-center">Thao tác</th></tr></thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {(() => {
-                    const currentUser = getCurrentUser();
-                    const filteredByPermission = filterDataByPermission(receipts, currentUser, 'storeId');
-                    return filteredByPermission.filter(r => {
+                  {filterDataByPermission(receipts, getCurrentUser(), 'storeId').filter(r => {
                       const rDate = r.date.split(' ')[0];
                       const matchId = !filterReceiptId || r.id.toLowerCase().includes(filterReceiptId.toLowerCase());
                       return matchId &&
@@ -1484,7 +1481,7 @@ export default function App() {
                              (!filterAcc || r.accountantId === filterAcc) &&
                              (!filterStartDate || rDate >= filterStartDate) &&
                              (!filterEndDate || rDate <= filterEndDate);
-                    }).sort((a, b) => b.id.localeCompare(a.id)).map(r => {
+                  }).sort((a, b) => b.id.localeCompare(a.id)).map(r => {
                     const storeName = stores.find(s => s.id === r.storeId)?.name || r.creator;
                     const itemCount = r.items.length;
                     const [dateOnly, timeOnly] = r.date.split(' ');
@@ -1519,8 +1516,7 @@ export default function App() {
                       </td>
                     </tr>
                     );
-                    });
-                  })()}
+                  })}
                 </tbody>
               </table>
               {receipts.length === 0 && <div className="p-10 text-center text-gray-400 italic bg-white">Không có dữ liệu phù hợp</div>}
@@ -1576,13 +1572,10 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {(() => {
-                    const currentUser = getCurrentUser();
-                    const filteredByPermission = filterDataByPermission(transactions, currentUser, 'storeId');
-                    return filteredByPermission.filter(t => {
+                  {filterDataByPermission(transactions, getCurrentUser(), 'storeId').filter(t => {
                       const matchType = !filterTransactionType || t.type === filterTransactionType;
                       return matchType;
-                    }).sort((a, b) => b.date.localeCompare(a.date)).map(t => (
+                  }).sort((a, b) => b.date.localeCompare(a.date)).map(t => (
                     <tr key={t.id} className={`hover:bg-gray-50 group ${t.type === 'chi' ? 'bg-red-50' : 'bg-green-50'}`}>
                       <td className="p-3 font-mono font-bold text-emerald-600">{t.id}</td>
                       <td className="p-3">
@@ -1619,62 +1612,44 @@ export default function App() {
             </div>
 
             {/* Summary Section */}
-            {transactions.length > 0 && (
-              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                  <div className="text-red-600 text-sm font-medium">Tổng Chi</div>
-                  <div className="text-red-700 font-bold text-lg mt-2">
-                    {transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType))
-                      .reduce((sum, t) => sum + t.amount, 0)
-                      .toLocaleString('vi-VN')} ₫
+            {transactions.length > 0 && (() => {
+              const filtered = filterDataByPermission(transactions, getCurrentUser(), 'storeId');
+              const chiTransactions = filtered.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType));
+              const thuTransactions = filtered.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType));
+              const chiAmount = chiTransactions.reduce((sum, t) => sum + t.amount, 0);
+              const thuAmount = thuTransactions.reduce((sum, t) => sum + t.amount, 0);
+              const net = thuAmount - chiAmount;
+              return (
+                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div className="text-red-600 text-sm font-medium">Tổng Chi</div>
+                    <div className="text-red-700 font-bold text-lg mt-2">
+                      {chiAmount.toLocaleString('vi-VN')} ₫
+                    </div>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-green-600 text-sm font-medium">Tổng Thu</div>
+                    <div className="text-green-700 font-bold text-lg mt-2">
+                      {thuAmount.toLocaleString('vi-VN')} ₫
+                    </div>
+                  </div>
+                  <div className={`border rounded-lg p-4 text-center ${net >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'}`}>
+                    <div className={`text-sm font-medium ${net >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                      Chênh lệch
+                    </div>
+                    <div className={`font-bold text-lg mt-2 ${net >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                      {(net >= 0 ? '+' : '') + net.toLocaleString('vi-VN')} ₫
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                    <div className="text-purple-600 text-sm font-medium">Tổng giao dịch</div>
+                    <div className="text-purple-700 font-bold text-lg mt-2">
+                      {filtered.filter(t => !filterTransactionType || t.type === filterTransactionType).length}
+                    </div>
                   </div>
                 </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                  <div className="text-green-600 text-sm font-medium">Tổng Thu</div>
-                  <div className="text-green-700 font-bold text-lg mt-2">
-                    {transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType))
-                      .reduce((sum, t) => sum + t.amount, 0)
-                      .toLocaleString('vi-VN')} ₫
-                  </div>
-                </div>
-                <div className={`border rounded-lg p-4 text-center ${
-                  (() => {
-                    const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                    const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                    const net = thu - chi;
-                    return net >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200';
-                  })()
-                }`}>
-                  <div className={`text-sm font-medium ${(() => {
-                    const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                    const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                    const net = thu - chi;
-                    return net >= 0 ? 'text-blue-600' : 'text-orange-600';
-                  })()}`}>
-                    Chênh lệch
-                  </div>
-                  <div className={`font-bold text-lg mt-2 ${(() => {
-                    const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                    const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                    const net = thu - chi;
-                    return net >= 0 ? 'text-blue-700' : 'text-orange-700';
-                  })()}`}>
-                    {(() => {
-                      const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                      const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
-                      const net = thu - chi;
-                      return (net >= 0 ? '+' : '') + net.toLocaleString('vi-VN');
-                    })()} ₫
-                  </div>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                  <div className="text-purple-600 text-sm font-medium">Tổng giao dịch</div>
-                  <div className="text-purple-700 font-bold text-lg mt-2">
-                    {transactions.filter(t => !filterTransactionType || t.type === filterTransactionType).length}
-                  </div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
