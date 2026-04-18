@@ -736,7 +736,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 font-sans pb-10 text-gray-800">
-      <RoleSelector currentRole={testUserRole} onRoleChange={(newRole) => { setTestUserRole(newRole); localStorage.setItem('userRole', newRole); }} />
       <style dangerouslySetInnerHTML={{__html: `
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
