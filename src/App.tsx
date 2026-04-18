@@ -48,6 +48,13 @@ interface Transaction {
   id: string; type: 'chi' | 'thu'; amount: number; note: string; date: string;
   storeId: string; storeName: string; creator: string;
 }
+interface Supplier {
+  id: string; name: string; password?: string; createdAt?: string;
+}
+interface InvoiceRequest {
+  id: string; storeId: string; supplierId?: string; amount: number; note?: string;
+  status: string; createdAt?: string; submittedAt?: string;
+}
 
 const STATUSES: any = {
   NEW: { id: 'NEW', label: 'Mới gửi', color: 'bg-blue-100 text-blue-800' },
@@ -185,6 +192,13 @@ export default function App() {
   const [newStoreAccId, setNewStoreAccId] = useState('');
   const [newStorePwd, setNewStorePwd] = useState('');
 
+  // Supplier management
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierPwd, setNewSupplierPwd] = useState('');
+  const [invoiceRequests, setInvoiceRequests] = useState<any[]>([]);
+  const [selectedInvoiceRequest, setSelectedInvoiceRequest] = useState<any>(null);
+
   const [filterStore, setFilterStore] = useState('');
   const [filterAcc, setFilterAcc] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -279,6 +293,16 @@ export default function App() {
       setAccountants(s.docs.map(d => ({ id: d.id, ...d.data() })) as Accountant[]);
     });
 
+    // Listen for suppliers
+    const unsubSup = onSnapshot(getPublicCol('suppliers'), (s) => {
+      setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // Listen for invoice requests
+    const unsubInvoiceReq = onSnapshot(getPublicCol('invoiceRequests'), (s) => {
+      setInvoiceRequests(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     const unsubSys = onSnapshot(getPublicDoc('system', 'config'), (s) => {
       if (s.exists()) setSystemPwd(s.data().adminPassword);
     });
@@ -305,7 +329,7 @@ export default function App() {
 
     setIsDBReady(true);
     setIsReloading(false);
-    return () => { unsubP(); unsubR(); unsubS(); unsubA(); unsubSys(); unsubT(); unsubNotif && unsubNotif(); };
+    return () => { unsubP(); unsubR(); unsubS(); unsubA(); unsubSup(); unsubInvoiceReq(); unsubSys(); unsubT(); unsubNotif && unsubNotif(); };
   }, [user, reloadTrigger]);
 
   useEffect(() => { if (!myStoreId && stores.length > 0) setMyStoreId(stores[0].id); }, [stores]);
@@ -354,6 +378,8 @@ export default function App() {
       }
     } else if (validatedUser.role === 'accountant') {
       setRole('KETOAN');
+    } else if (validatedUser.role === 'supplier') {
+      setRole('QUANLYHOADON');
     } else if (validatedUser.role === 'admin') {
       setRole('TRACKING');
     }
@@ -959,6 +985,8 @@ export default function App() {
                 visibleTabs = ['KETOAN', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'store_manager') {
                 visibleTabs = ['CUAHANG', 'SETTINGS'];
+              } else if (loginUser?.role === 'supplier') {
+                visibleTabs = ['QUANLYHOADON', 'SETTINGS'];
               } else {
                 visibleTabs = ['CUNGUNG', 'TRACKING', 'SETTINGS'];
               }
@@ -969,7 +997,7 @@ export default function App() {
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${role === r ? 'bg-yellow-400 text-emerald-900 shadow-lg scale-105' : 'text-white hover:bg-white/20'}`}
                   onClick={() => setRole(r)}
                 >
-                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : r === 'QUANLYTAIKHOAN' ? 'QUẢN LÝ TÀI KHOẢN' : 'KẾ TOÁN'}
+                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : r === 'QUANLYTAIKHOAN' ? 'QUẢN LÝ TÀI KHOẢN' : r === 'QUANLYHOADON' ? 'QUẢN LÝ HÓA ĐƠN' : 'KẾ TOÁN'}
                 </button>
               ));
             })()}
@@ -2040,7 +2068,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Quản lý Kế toán */}
                 <div className="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden flex flex-col">
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
@@ -2175,6 +2203,187 @@ export default function App() {
                       {stores.length === 0 && <div className="text-center text-gray-400 text-sm py-6">Tạo cửa hàng trước</div>}
                     </div>
                   </div>
+                </div>
+
+                {/* Quản lý Cung ứng */}
+                <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden flex flex-col">
+                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2"><UserPlus className="w-5 h-5"/> Cung Ứng</h3>
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="space-y-3 mb-6">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Tên nhà cung cấp</label>
+                        <input type="text" placeholder="Nhập tên cung ứng" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Mật khẩu</label>
+                        <input type="password" placeholder="Nhập mật khẩu" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm" value={newSupplierPwd} onChange={e => setNewSupplierPwd(e.target.value)} />
+                      </div>
+                      <button onClick={() => {
+                        if (newSupplierName.trim() && newSupplierPwd.trim()) {
+                          const supplierId = `SUP_${Date.now()}`;
+                          setDoc(getPublicDoc('suppliers', supplierId), {
+                            name: newSupplierName,
+                            password: newSupplierPwd,
+                            createdAt: new Date().toISOString(),
+                          });
+                          setNewSupplierName('');
+                          setNewSupplierPwd('');
+                          showToast('✅ Thêm cung ứng thành công!');
+                        } else {
+                          showToast('❌ Vui lòng điền đầy đủ thông tin!');
+                        }
+                      }} className="w-full py-2.5 mt-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2">
+                        <Plus className="w-4 h-4"/> Thêm Mới
+                      </button>
+                    </div>
+
+                    <div className="border-t pt-4 flex-1">
+                      <h4 className="text-xs font-bold text-gray-600 mb-3 uppercase">Danh sách ({suppliers.length})</h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {suppliers.map(sup => (
+                          <div key={sup.id} className="p-3 bg-purple-50 rounded-lg border border-purple-200 flex items-start justify-between group hover:bg-purple-100 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-800 text-sm truncate">{sup.name}</div>
+                              <div className="text-xs text-gray-600 font-mono mt-1">{sup.id}</div>
+                            </div>
+                            <button onClick={() => deleteDoc(getPublicDoc('suppliers', sup.id))} className="text-gray-400 hover:text-red-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 className="w-4 h-4"/>
+                            </button>
+                          </div>
+                        ))}
+                        {suppliers.length === 0 && <div className="text-center text-gray-400 text-sm py-6">Chưa có cung ứng</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* QUẢN LÝ HÓA ĐƠN TAB - SUPPLIER ONLY */}
+        {role === 'QUANLYHOADON' && loginUser?.role === 'supplier' && (
+          <div className="max-w-6xl mx-auto p-6">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-xl shadow-lg">
+                <FileText className="w-6 h-6"/>
+                <div>
+                  <h2 className="text-2xl font-bold">Quản Lý Hoá Đơn</h2>
+                  <p className="text-sm text-purple-100">Xử lý yêu cầu hoá đơn từ kế toán</p>
+                </div>
+              </div>
+
+              {/* Invoice Requests Table */}
+              <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4">
+                  <h3 className="font-bold text-lg flex items-center gap-2"><FileText className="w-5 h-5"/> Yêu Cầu Hoá Đơn ({invoiceRequests.length})</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700">ID</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700">Cửa Hàng</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700">Số Tiền</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700">Ghi Chú</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700">Trạng Thái</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-700">Hành Động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoiceRequests.map(req => (
+                        <tr key={req.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 text-sm font-mono text-gray-800">{req.id}</td>
+                          <td className="px-6 py-4 text-sm text-gray-800">{stores.find(s => s.id === req.storeId)?.name || 'N/A'}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-800">{req.amount?.toLocaleString('vi-VN')} đ</td>
+                          <td className="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">{req.note || '-'}</td>
+                          <td className="px-6 py-4 text-sm">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              req.status === 'Đã gửi'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-orange-100 text-orange-800'
+                            }`}>
+                              {req.status || 'Chờ xử lý'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <button
+                              onClick={() => setSelectedInvoiceRequest(req)}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <FileUp className="w-3 h-3"/> Gửi HĐ
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {invoiceRequests.length === 0 && (
+                    <div className="text-center py-8 text-gray-400">
+                      <FileText className="w-8 h-8 mx-auto mb-2 opacity-50"/>
+                      <p>Chưa có yêu cầu hoá đơn</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: SUBMIT INVOICE */}
+        {selectedInvoiceRequest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 flex justify-between items-center">
+                <h3 className="text-xl font-bold flex items-center gap-2"><FileUp className="w-5 h-5"/> Gửi Hoá Đơn</h3>
+                <button onClick={() => setSelectedInvoiceRequest(null)} className="text-white hover:bg-white/20 rounded p-1">✕</button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <p className="text-xs text-gray-600 mb-2">Yêu cầu từ</p>
+                  <p className="font-bold text-gray-800">{stores.find(s => s.id === selectedInvoiceRequest.storeId)?.name}</p>
+                  <p className="text-xs text-gray-600 mt-2">Số tiền: <strong>{selectedInvoiceRequest.amount?.toLocaleString('vi-VN')} đ</strong></p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú hoá đơn</label>
+                  <textarea
+                    placeholder="Nhập ghi chú..."
+                    className="w-full p-3 border-2 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="border-2 border-dashed border-purple-300 rounded-lg p-4 text-center cursor-pointer hover:bg-purple-50 transition-colors">
+                  <Paperclip className="w-6 h-6 text-purple-600 mx-auto mb-2"/>
+                  <p className="text-sm font-medium text-gray-700">Đính kèm file hoá đơn</p>
+                  <p className="text-xs text-gray-500">PDF, Excel hoặc ảnh</p>
+                  <input type="file" className="hidden" accept=".pdf,.xlsx,.xls,.jpg,.png" />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setSelectedInvoiceRequest(null)}
+                    className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateDoc(getPublicDoc('invoiceRequests', selectedInvoiceRequest.id), {
+                        status: 'Đã gửi',
+                        submittedAt: new Date().toISOString(),
+                      });
+                      setSelectedInvoiceRequest(null);
+                      showToast('✅ Gửi hoá đơn thành công!');
+                    }}
+                    className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Upload className="w-4 h-4"/> Gửi
+                  </button>
                 </div>
               </div>
             </div>

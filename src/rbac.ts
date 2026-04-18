@@ -3,7 +3,7 @@
 // ============================================
 
 // Types
-export type UserRole = 'admin' | 'accountant' | 'store_manager';
+export type UserRole = 'admin' | 'accountant' | 'store_manager' | 'supplier';
 
 export interface User {
   id: string;
@@ -11,6 +11,7 @@ export interface User {
   role: UserRole;
   storeIds?: string[]; // Cửa hàng phụ trách (cho store_manager/accountant)
   accountantStores?: string[]; // Cửa hàng kế toán phụ trách
+  supplierCategories?: string[]; // Danh mục cung cấp (cho supplier)
 }
 
 export interface PermissionCheck {
@@ -46,6 +47,11 @@ export const checkPermission = (
     const allowed = user.accountantStores || [];
     const canView = allowed.includes(resourceStoreId);
     return { canView, allowedStoreIds: allowed };
+  }
+
+  // Cung ứng: xem tất cả requests của họ
+  if (user.role === 'supplier') {
+    return { canView: true, allowedStoreIds: ['*'] };
   }
 
   return { canView: false, allowedStoreIds: [] };
@@ -152,6 +158,27 @@ export const validateLogin = (role: UserRole, username: string, password: string
     return null;
   }
 
+  // Suppliers
+  const suppliers: Record<string, { id: string; name: string; password: string }> = {
+    'supplier1': { id: 'SUP_001', name: 'Supplier 1', password: '123' },
+    'supplier2': { id: 'SUP_002', name: 'Supplier 2', password: '123' },
+    'supplier3': { id: 'SUP_003', name: 'Supplier 3', password: '123' },
+  };
+
+  if (role === 'supplier') {
+    const supplierKey = username.toLowerCase().replace(/\s+/g, '');
+    const supplier = suppliers[supplierKey];
+    if (supplier && supplier.password === password) {
+      return {
+        id: supplier.id,
+        name: supplier.name,
+        role: 'supplier',
+        supplierCategories: [],
+      };
+    }
+    return null;
+  }
+
   return null;
 };
 
@@ -168,6 +195,9 @@ export const getUsernamesByRole = (role: UserRole): string[] => {
   if (role === 'store_manager') {
     return ['Phước Long', 'Phú Sơn', 'BomBo'];
   }
+  if (role === 'supplier') {
+    return ['Supplier 1', 'Supplier 2', 'Supplier 3'];
+  }
   return [];
 };
 
@@ -179,6 +209,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
     admin: 'Quản trị viên',
     store_manager: 'Quản lý Cửa hàng',
     accountant: 'Kế toán',
+    supplier: 'Cung ứng',
   };
   return names[role];
 };
