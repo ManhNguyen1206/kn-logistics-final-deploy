@@ -335,6 +335,14 @@ export default function App() {
   useEffect(() => { if (!myStoreId && stores.length > 0) setMyStoreId(stores[0].id); }, [stores]);
   useEffect(() => { if (!myAccId && accountants.length > 0) setMyAccId(accountants[0].id); }, [accountants]);
 
+  // Auto-auth store_manager when they log in
+  useEffect(() => {
+    if (loginUser?.role === 'store_manager' && loginUser?.storeIds && loginUser.storeIds.length > 0 && !isStoreAuth) {
+      setMyStoreId(loginUser.storeIds[0]);
+      setIsStoreAuth(true);
+    }
+  }, [loginUser, isStoreAuth]);
+
   // Auto dismiss toast notification after 5 seconds
   useEffect(() => {
     if (toastNotification) {
@@ -985,7 +993,7 @@ export default function App() {
               } else if (loginUser?.role === 'accountant') {
                 visibleTabs = ['KETOAN', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'store_manager') {
-                visibleTabs = ['CUAHANG', 'SETTINGS'];
+                visibleTabs = ['CUAHANG', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'supplier') {
                 visibleTabs = ['QUANLYHOADON', 'SETTINGS'];
               } else {
