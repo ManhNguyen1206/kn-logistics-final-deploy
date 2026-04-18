@@ -943,7 +943,7 @@ export default function App() {
                     type="text"
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value.toUpperCase())}
-                    placeholder="Nhập ID (VD: CH_PHUOCLONG, KT_SANG)"
+                    placeholder="Nhập ID"
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-gray-800 uppercase"
                   />
                   {loginUsername && (
@@ -1375,7 +1375,6 @@ export default function App() {
                       <div className="font-bold text-gray-800 text-sm">{accountants.find(a => a.id === myAccId)?.name}</div>
                     </div>
                   </div>
-                  <button onClick={() => { setIsAccAuth(false); setAccPwdInput(''); }} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-md"><Lock className="w-4 h-4" /> Đóng ca</button>
                 </div>
 
                 {/* KETOAN TABS */}
@@ -2024,11 +2023,10 @@ export default function App() {
             ) : (
               <div className="space-y-6">
                 {/* Header Setting */}
-                <div className="flex justify-between items-center bg-gray-800 text-white p-4 rounded-xl shadow-sm">
+                <div className="bg-gray-800 text-white p-4 rounded-xl shadow-sm">
                    <div className="flex items-center gap-2 font-medium">
                      <Settings className="w-5 h-5 text-gray-300"/> Cấu Hình Hệ Thống
                    </div>
-                   <button onClick={() => { setIsMappingAuth(false); setInputPwd(''); }} className="text-gray-300 hover:text-white text-sm flex items-center gap-1.5 bg-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-600 transition-colors"><Lock className="w-4 h-4"/> Đóng</button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
