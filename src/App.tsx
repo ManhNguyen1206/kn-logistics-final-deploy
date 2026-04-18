@@ -915,6 +915,7 @@ export default function App() {
                     <option value="admin">Quản trị viên</option>
                     <option value="accountant">Kế toán</option>
                     <option value="store_manager">Cửa hàng</option>
+                    <option value="supplier">Cung ứng</option>
                   </select>
                 </div>
 
