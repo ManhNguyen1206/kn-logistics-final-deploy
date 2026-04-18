@@ -1689,69 +1689,6 @@ export default function App() {
                      <div className="font-medium text-gray-500">Không có yêu cầu tải hóa đơn nào.</div>
                    </div>
                 )}
-
-                {/* SECTION 2: YÊU CẦU HÓA ĐƠN TỪ KỂ TOÁN */}
-                <div className="space-y-4 mt-8">
-                  <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-md border border-blue-100">
-                     <div className="flex items-center gap-2">
-                       <FileText className="w-5 h-5 text-blue-600"/>
-                       <h2 className="font-bold text-gray-800">Yêu Cầu Hóa Đơn từ Kế Toán</h2>
-                     </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {invoiceRequests.filter(req => req.status !== 'submitted' && req.status !== 'completed').map(req => {
-                      const storeName = stores.find(s => s.id === req.storeId)?.name || 'Cửa hàng không xác định';
-                      const createdDate = req.createdAt ? new Date(req.createdAt).toLocaleDateString('vi-VN') : '';
-                      const statusLabel = req.status === 'submitted' ? 'Đã gửi' : 'Chờ xử lý';
-                      return (
-                      <div key={req.id} className="bg-white p-5 rounded-2xl shadow-md border border-blue-100 flex flex-col justify-between">
-                        <div className="mb-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex-1">
-                              <span className="font-bold text-blue-600 text-lg block">{req.id}</span>
-                              <span className="text-xs text-gray-500">{createdDate}</span>
-                            </div>
-                            <span className="text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-300 px-2 py-0.5 rounded">YÊU CẦU MỚI</span>
-                          </div>
-
-                          <div className="text-sm text-gray-700 space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-gray-400"/>
-                              <strong>Cửa hàng:</strong> {storeName}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-gray-400"/>
-                              <strong>Số tiền:</strong> {req.amount?.toLocaleString('vi-VN')} đ
-                            </div>
-                            {req.note && (
-                              <div className="text-xs text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-200 mt-2">
-                                <strong>Ghi chú:</strong> {req.note}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2 pt-3 border-t border-gray-200">
-                          <button className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
-                            <CheckCircle className="w-4 h-4"/> Đã gửi hóa đơn
-                          </button>
-                          <button className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium text-sm transition-colors">
-                            Xem chi tiết
-                          </button>
-                        </div>
-                      </div>
-                      );
-                    })}
-                  </div>
-
-                  {invoiceRequests.filter(req => req.status !== 'submitted' && req.status !== 'completed').length === 0 && (
-                   <div className="text-center py-12 bg-white rounded-2xl shadow-md border border-blue-100">
-                     <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                     <div className="font-medium text-gray-500">Không có yêu cầu hóa đơn nào từ kế toán.</div>
-                   </div>
-                  )}
-                </div>
               </div>
             )}
           </div>
