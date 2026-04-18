@@ -1598,8 +1598,7 @@ export default function App() {
                       </td>
                       <td className="p-3 text-gray-600 text-xs max-w-xs truncate" title={t.note}>{t.note || '-'}</td>
                     </tr>
-                    ));
-                  })()}
+                  ))}
                 </tbody>
               </table>
               {(() => {
