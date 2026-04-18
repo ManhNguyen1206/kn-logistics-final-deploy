@@ -1369,6 +1369,16 @@ export default function App() {
                   >
                     💰 Giao Dịch Chi/Thu
                   </button>
+                  <button
+                    onClick={() => setKeToanTabIndex(2)}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                      keToanTabIndex === 2
+                        ? 'border-yellow-500 text-yellow-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    📄 Yêu Cầu Hoá Đơn
+                  </button>
                 </div>
 
                 {/* TAB 0: NHẬP HÀNG */}
@@ -1642,6 +1652,89 @@ export default function App() {
                      <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                      <div className="font-medium text-gray-500">Không có yêu cầu tải hóa đơn nào.</div>
                    </div>
+                )}
+              </div>
+            )}
+
+                {/* TAB 2: YÊU CẦU HÓA ĐƠN */}
+                {keToanTabIndex === 2 && (
+                <div className="space-y-4">
+                  {/* Form Yêu Cầu Hoá Đơn */}
+                  <div className="bg-white p-6 rounded-2xl shadow-md border border-blue-200">
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><FileText className="w-5 h-5"/> Yêu Cầu Hoá Đơn Mới</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Cửa hàng</label>
+                        <select className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                          <option>-- Chọn cửa hàng --</option>
+                          {stores.filter(s => s.accountantId === myAccId).map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Cung ứng</label>
+                        <select className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                          <option>-- Chọn cung ứng --</option>
+                          {suppliers.map(sup => (
+                            <option key={sup.id} value={sup.id}>{sup.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Số tiền</label>
+                        <input type="number" placeholder="0" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <label className="text-xs font-semibold text-gray-600 mb-2 block">Ghi chú</label>
+                      <textarea placeholder="Nhập ghi chú yêu cầu..." className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" rows={2} />
+                    </div>
+                    <button className="w-full py-2.5 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2">
+                      <Plus className="w-4 h-4"/> Gửi Yêu Cầu
+                    </button>
+                  </div>
+
+                  {/* Danh Sách Yêu Cầu */}
+                  <div className="bg-white p-6 rounded-2xl shadow-md border border-blue-200">
+                    <h3 className="font-bold text-gray-800 mb-4">Danh Sách Yêu Cầu Hoá Đơn ({invoiceRequests.filter(req => {
+                      const reqStore = stores.find(s => s.id === req.storeId);
+                      return reqStore?.accountantId === myAccId;
+                    }).length})</h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {invoiceRequests.filter(req => {
+                        const reqStore = stores.find(s => s.id === req.storeId);
+                        return reqStore?.accountantId === myAccId;
+                      }).map(req => (
+                        <div key={req.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-800 text-sm">{req.id}</div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              {stores.find(s => s.id === req.storeId)?.name} • {req.amount?.toLocaleString('vi-VN')} đ
+                            </div>
+                            <div className="mt-2">
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                req.status === 'Đã gửi'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}>
+                                {req.status || 'Chờ xử lý'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {invoiceRequests.filter(req => {
+                        const reqStore = stores.find(s => s.id === req.storeId);
+                        return reqStore?.accountantId === myAccId;
+                      }).length === 0 && (
+                        <div className="text-center py-6 text-gray-400">
+                          <p>Chưa có yêu cầu hoá đơn nào</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 )}
               </div>
             )}
