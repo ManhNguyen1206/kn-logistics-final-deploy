@@ -100,7 +100,8 @@ export const getCurrentUser = (): User | null => {
 export const validateLogin = (role: UserRole, usernameOrId: string, password: string): User | null => {
   // Admin
   if (role === 'admin') {
-    if ((usernameOrId === 'admin' || usernameOrId === 'admin-001') && password === 'admin123') {
+    const adminId = usernameOrId.toUpperCase();
+    if ((adminId === 'ADMIN' || adminId === 'ADMIN-001') && password === 'admin123') {
       return {
         id: 'admin-001',
         name: 'Quản trị viên',
