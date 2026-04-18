@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Trash2, CheckCircle, Clock, Package, AlertCircle, FileText, ArrowRight, Database, RefreshCw, Lock, Unlock, UserPlus, MapPin, Download, FileUp, Paperclip, Upload, Settings } from 'lucide-react';
+import { Search, Plus, Trash2, CheckCircle, Clock, Package, AlertCircle, FileText, ArrowRight, Database, RefreshCw, Lock, Unlock, UserPlus, MapPin, Download, FileUp, Paperclip, Upload, Settings, Bell, X } from 'lucide-react';
 
 // ============================================================================
 // BƯỚC 1: CẤU HÌNH DATABASE FIREBASE
@@ -37,6 +37,14 @@ interface Receipt {
   id: string; date: string; creator: string; storeId: string; accountantId: string;
   items: ReceiptItem[]; status: string; accNotes: string; generalNote: string; erpId: string;
   invoice?: { name: string, url: any };
+}
+interface Notification {
+  id: string; accountantId: string; receiptId: string; storeId: string; storeName: string;
+  createdAt: string; isRead: boolean; type: string;
+}
+interface Transaction {
+  id: string; type: 'chi' | 'thu'; amount: number; note: string; date: string;
+  storeId: string; storeName: string; creator: string;
 }
 
 const STATUSES: any = {
@@ -128,7 +136,7 @@ const ProductSearch = ({ onSelect, products }: { onSelect: (p: Product) => void,
 };
 
 export default function App() {
-  const [role, setRole] = useState('KHO'); 
+  const [role, setRole] = useState('CUAHANG'); 
   const [toastMsg, setToastMsg] = useState('');
   const [user, setUser] = useState<any>(null);
   const [isDBReady, setIsDBReady] = useState(false);
@@ -186,6 +194,25 @@ export default function App() {
   const [splitNote, setSplitNote] = useState('');
   const [selectedItemsWithInvoice, setSelectedItemsWithInvoice] = useState<number[]>([]);
 
+
+  // NOTIFICATION FEATURE
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  const [toastNotification, setToastNotification] = useState<Notification | null>(null);
+
+  // RELOAD DATA FEATURE
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [isReloading, setIsReloading] = useState(false);
+
+  // TRANSACTIONS (CHI/THU) FEATURE
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactionType, setTransactionType] = useState<'chi' | 'thu'>('chi');
+  const [transactionAmount, setTransactionAmount] = useState('');
+  const [transactionNote, setTransactionNote] = useState('');
+  const [keToanTabIndex, setKeToanTabIndex] = useState(0); // 0: Nhập hàng, 1: Chi/Thu
+  const [filterTransactionType, setFilterTransactionType] = useState('');
+
   useEffect(() => {
     signInAnonymously(auth).catch(err => console.error("Lỗi Auth:", err));
     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -201,7 +228,6 @@ export default function App() {
 
     const unsubR = onSnapshot(getPublicCol('receipts'), (s) => {
       const l = s.docs.map(d => ({ id: d.id, ...d.data() })) as Receipt[];
-      l.sort((a, b) => b.id.localeCompare(a.id));
       setReceipts(l);
     });
 
@@ -217,14 +243,67 @@ export default function App() {
       if (s.exists()) setSystemPwd(s.data().adminPassword);
     });
 
+    // Listen for transactions
+    const unsubT = onSnapshot(getPublicCol('transactions'), (s) => {
+      setTransactions(s.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[]);
+    });
+
+    // Listen for notifications
+    let unsubNotif: any = null;
+    if (isMappingAuth && myAccId) {
+      unsubNotif = onSnapshot(getPublicCol('notifications'), (s) => {
+        const allNotifs = s.docs.map(d => ({ id: d.id, ...d.data() })) as Notification[];
+        const myNotifs = allNotifs.filter(n => n.accountantId === myAccId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setNotifications(myNotifs);
+        setUnreadCount(myNotifs.filter(n => !n.isRead).length);
+
+        // Show toast for new unread notifications
+        const unreadNotif = myNotifs.find(n => !n.isRead);
+        if (unreadNotif) setToastNotification(unreadNotif);
+      });
+    }
+
     setIsDBReady(true);
-    return () => { unsubP(); unsubR(); unsubS(); unsubA(); unsubSys(); };
-  }, [user]);
+    setIsReloading(false);
+    return () => { unsubP(); unsubR(); unsubS(); unsubA(); unsubSys(); unsubT(); unsubNotif && unsubNotif(); };
+  }, [user, reloadTrigger]);
 
   useEffect(() => { if (!myStoreId && stores.length > 0) setMyStoreId(stores[0].id); }, [stores]);
   useEffect(() => { if (!myAccId && accountants.length > 0) setMyAccId(accountants[0].id); }, [accountants]);
 
+  // Auto dismiss toast notification after 5 seconds
+  useEffect(() => {
+    if (toastNotification) {
+      const timer = setTimeout(() => setToastNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastNotification]);
+
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 4000); };
+
+  const handleMarkNotificationAsRead = async (notifId: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(getPublicDoc('notifications', notifId), { isRead: true });
+    } catch (e: any) {
+      console.error('Lỗi đánh dấu đã đọc:', e.message);
+    }
+  };
+
+  const handleDeleteNotification = async (notifId: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(getPublicDoc('notifications', notifId));
+    } catch (e: any) {
+      console.error('Lỗi xóa thông báo:', e.message);
+    }
+  };
+
+  const handleReloadData = () => {
+    setIsReloading(true);
+    setReloadTrigger(prev => prev + 1);
+    showToast('🔄 Đang tải lại dữ liệu...');
+  };
 
   const handleDeleteReceipt = async (receiptId: string, password: string) => {
     if (password !== systemPwd) {
@@ -501,17 +580,72 @@ export default function App() {
 
   const handleSubmitReceipt = async () => {
     if (!user || currentItems.length === 0) return;
-    const newId = `PNH-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const now = new Date();
+    const dateStr = now.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    const timeMs = now.getTime().toString().slice(-6);
+    const newId = `PNH-${timeMs}`;
     const store = stores.find(s => s.id === myStoreId);
     if (!store) return;
     const data = {
-      id: newId, date: new Date().toLocaleString('vi-VN'), creator: store.name,
+      id: newId, date: dateStr, creator: store.name,
       storeId: store.id, accountantId: store.accountantId, items: currentItems,
       status: 'NEW', accNotes: '', generalNote, erpId: '', costs: { transport: 0, handling: 0 }
     };
     await setDoc(getPublicDoc('receipts', newId), data);
+
+    // Create notification for accountant
+    const notifId = `notif-${newId}-${Date.now()}`;
+    const notifData: Notification = {
+      id: notifId,
+      accountantId: store.accountantId,
+      receiptId: newId,
+      storeId: store.id,
+      storeName: store.name,
+      createdAt: new Date().toLocaleString('vi-VN'),
+      isRead: false,
+      type: 'NEW_RECEIPT'
+    };
+    await setDoc(getPublicDoc('notifications', notifId), notifData);
+
     setCurrentItems([]); setGeneralNote('');
     showToast(`Đã gửi thành công báo cáo ${newId}`);
+  };
+
+  const handleSubmitTransaction = async () => {
+    if (!user || !transactionAmount || !myStoreId) return;
+    const now = new Date();
+    const dateStr = now.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    const timeMs = now.getTime().toString().slice(-6);
+    const newId = `${transactionType === 'chi' ? 'CHI' : 'THU'}-${timeMs}`;
+    const store = stores.find(s => s.id === myStoreId);
+    if (!store) return;
+    const data: Transaction = {
+      id: newId,
+      type: transactionType,
+      amount: parseFloat(transactionAmount),
+      note: transactionNote,
+      date: dateStr,
+      storeId: store.id,
+      storeName: store.name,
+      creator: store.name
+    };
+    await setDoc(getPublicDoc('transactions', newId), data);
+    setTransactionAmount(''); setTransactionNote('');
+    showToast(`✅ Ghi nhận ${transactionType === 'chi' ? 'chi' : 'thu'} ${transactionAmount} thành công!`);
   };
 
   const handleUpdateReceiptStatus = async (receiptId: string, newStatus: string, erpId: string, accNotes: string) => {
@@ -548,11 +682,89 @@ export default function App() {
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
+        @keyframes slideIn {
+          from { transform: translateX(400px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .animate-slideIn { animation: slideIn 0.3s ease-out forwards; }
       `}} />
 
       {toastMsg && (
         <div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-xl z-50 flex items-center gap-2 backdrop-blur-sm">
           <CheckCircle className="w-4 h-4" /> <span className="text-sm font-medium">{toastMsg}</span>
+        </div>
+      )}
+
+      {/* NOTIFICATION TOAST */}
+      {toastNotification && (
+        <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-5 py-4 rounded-xl shadow-xl z-50 flex items-start gap-3 backdrop-blur-sm max-w-sm animate-slideIn">
+          <div className="flex-1">
+            <div className="text-sm font-bold">📨 Phiếu nhập mới</div>
+            <div className="text-xs mt-1 opacity-90">Cửa hàng: <strong>{toastNotification.storeName}</strong></div>
+            <div className="text-xs mt-1 opacity-90">Mã: <strong>{toastNotification.receiptId}</strong></div>
+          </div>
+          <button
+            onClick={() => { handleMarkNotificationAsRead(toastNotification.id); setToastNotification(null); setRole('TRACKING'); }}
+            className="ml-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
+          >
+            Xem
+          </button>
+        </div>
+      )}
+
+      {/* NOTIFICATION PANEL */}
+      {showNotificationPanel && isMappingAuth && (
+        <div className="fixed top-20 right-4 w-96 max-h-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-y-auto">
+          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              <span className="font-bold">Thông báo ({unreadCount})</span>
+            </div>
+            <button onClick={() => setShowNotificationPanel(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Không có thông báo</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {notifications.map(notif => (
+                <div key={notif.id} className={`p-4 hover:bg-gray-50 transition-colors border-l-4 ${notif.isRead ? 'border-gray-300 bg-gray-50' : 'border-blue-500 bg-blue-50'}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-gray-800">📨 Phiếu nhập mới</div>
+                      <div className="text-xs text-gray-600 mt-1">Cửa hàng: <strong>{notif.storeName}</strong></div>
+                      <div className="text-xs text-gray-600">Mã phiếu: <strong>{notif.receiptId}</strong></div>
+                      <div className="text-xs text-gray-500 mt-2">🕒 {notif.createdAt}</div>
+                    </div>
+                    {!notif.isRead && (
+                      <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    {!notif.isRead && (
+                      <button
+                        onClick={() => { handleMarkNotificationAsRead(notif.id); setShowNotificationPanel(false); setRole('TRACKING'); }}
+                        className="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      >
+                        Xem phiếu
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteNotification(notif.id)}
+                      className="flex-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -566,16 +778,44 @@ export default function App() {
             KN-Logistics
           </h1>
           <div className="flex overflow-x-auto hide-scrollbar bg-white/10 backdrop-blur-sm rounded-xl p-1.5 space-x-1 border border-white/20">
-            {['KHO', 'KETOAN', 'CUNGUNG', 'TRACKING', 'SETTINGS'].map(r => (
+            {['CUAHANG', 'KETOAN', 'CUNGUNG', 'TRACKING', 'SOQUY', 'SETTINGS'].map(r => (
               <button
                 key={r}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${role === r ? 'bg-yellow-400 text-emerald-900 shadow-lg scale-105' : 'text-white hover:bg-white/20'}`}
                 onClick={() => setRole(r)}
               >
-                {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'KHO' ? 'NHẬP HÀNG' : 'KẾ TOÁN'}
+                {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : 'KẾ TOÁN'}
               </button>
             ))}
           </div>
+          {/* RELOAD DATA BUTTON */}
+          <button
+            onClick={handleReloadData}
+            disabled={isReloading}
+            className={`p-2 rounded-lg transition-colors text-white ${isReloading ? 'bg-white/30' : 'hover:bg-white/20'}`}
+            title="Tải lại dữ liệu"
+          >
+            <RefreshCw className={`w-5 h-5 ${isReloading ? 'animate-spin' : ''}`} />
+          </button>
+
+          {/* NOTIFICATION BUTTON */}
+          {isMappingAuth && (
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white relative"
+                title="Thông báo"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
           {/* ADMIN MENU */}
           <div className="relative">
             <button
@@ -604,20 +844,12 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         
-        {/* CẢNH BÁO DB TRỐNG */}
-        {accountants.length === 0 && role !== 'SETTINGS' && (
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-xl border border-yellow-300 text-center mb-6 shadow-sm">
-            <AlertCircle className="w-10 h-10 text-yellow-600 mx-auto mb-2" />
-            <h3 className="text-yellow-700 font-bold mb-1">Chưa có dữ liệu hệ thống</h3>
-            <p className="text-sm text-gray-600 mb-4">Vui lòng vào tab CÀI ĐẶT để thiết lập hoặc tạo dữ liệu mẫu.</p>
-            <button onClick={handleInitDatabase} disabled={isSyncing} className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-2 rounded-lg font-semibold shadow-md transition-all disabled:opacity-50">Khởi tạo dữ liệu mẫu</button>
-          </div>
-        )}
+        {/* CẢNH BÁO DB TRỐNG - HIDDEN FOR PERFORMANCE */}
 
         {/* =======================
-            TAB NHẬP HÀNG (KHO)
+            TAB CỬA HÀNG
         ========================= */}
-        {role === 'KHO' && (
+        {role === 'CUAHANG' && (
           <div className="max-w-3xl mx-auto">
             {!isStoreAuth ? (
               <div className="max-w-sm mx-auto bg-white p-8 rounded-2xl shadow-xl border border-emerald-200 mt-10">
@@ -654,6 +886,33 @@ export default function App() {
                   <button onClick={() => { setIsStoreAuth(false); setStorePwdInput(''); }} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-md"><Lock className="w-4 h-4"/> Đăng xuất</button>
                 </div>
                 
+                {/* TAB SELECTION FOR CỬA HÀNG */}
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                  <button
+                    onClick={() => setKeToanTabIndex(0)}
+                    className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 ${
+                      keToanTabIndex === 0
+                        ? 'border-emerald-500 text-emerald-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    📦 Nhập Hàng Hóa
+                  </button>
+                  <button
+                    onClick={() => setKeToanTabIndex(1)}
+                    className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 ${
+                      keToanTabIndex === 1
+                        ? 'border-emerald-500 text-emerald-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    💰 Chi/Thu
+                  </button>
+                </div>
+
+                {/* TAB 0: NHẬP HÀNG HÓA */}
+                {keToanTabIndex === 0 && (
+                  <>
                 <div className="mb-6 relative z-30">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Thêm hàng hóa vào phiếu</label>
                   <ProductSearch products={products} onSelect={(p: Product) => setCurrentItems([...currentItems, { product: p, quantity: 1, note: '' }])} />
@@ -738,6 +997,80 @@ export default function App() {
                   </div>
                 )}
                 {currentItems.length === 0 && <div className="py-16 text-center text-gray-400 text-sm bg-gray-50 rounded-lg border border-dashed border-gray-300 mt-2">Chưa có sản phẩm nào được chọn</div>}
+                  </>
+                )}
+
+                {/* TAB 1: CHI/THU */}
+                {keToanTabIndex === 1 && (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><span className="text-lg">💰</span> Ghi Nhận Chi/Thu Tiền</h3>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Loại giao dịch</label>
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setTransactionType('chi')}
+                              className={`flex-1 py-3 rounded-lg font-medium transition-all border-2 ${
+                                transactionType === 'chi'
+                                  ? 'bg-red-500 text-white border-red-500'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-red-400'
+                              }`}
+                            >
+                              🔴 Chi (Tiền Ra)
+                            </button>
+                            <button
+                              onClick={() => setTransactionType('thu')}
+                              className={`flex-1 py-3 rounded-lg font-medium transition-all border-2 ${
+                                transactionType === 'thu'
+                                  ? 'bg-green-500 text-white border-green-500'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
+                              }`}
+                            >
+                              🟢 Thu (Tiền Vào)
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Số tiền (VNĐ)</label>
+                          <input
+                            type="number"
+                            placeholder="Nhập số tiền..."
+                            className="w-full p-3 border-2 border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            value={transactionAmount}
+                            onChange={e => setTransactionAmount(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú</label>
+                          <textarea
+                            placeholder="VD: Thanh toán tương ứng hoá đơn PNH-123456, tiền công nhân, chi khác..."
+                            className="w-full p-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500 h-20 resize-none"
+                            value={transactionNote}
+                            onChange={e => setTransactionNote(e.target.value)}
+                          />
+                        </div>
+
+                        <button
+                          onClick={handleSubmitTransaction}
+                          disabled={!transactionAmount}
+                          className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-white ${
+                            transactionAmount
+                              ? transactionType === 'chi'
+                                ? 'bg-red-500 hover:bg-red-600'
+                                : 'bg-green-500 hover:bg-green-600'
+                              : 'bg-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          {transactionType === 'chi' ? '✂️ Ghi Nhận Chi' : '✓ Ghi Nhận Thu'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -782,7 +1115,34 @@ export default function App() {
                   </div>
                   <button onClick={() => { setIsAccAuth(false); setAccPwdInput(''); }} className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-md"><Lock className="w-4 h-4" /> Đóng ca</button>
                 </div>
-                
+
+                {/* KETOAN TABS */}
+                <div className="flex gap-2 border-b border-gray-200 bg-white p-4 rounded-xl">
+                  <button
+                    onClick={() => setKeToanTabIndex(0)}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                      keToanTabIndex === 0
+                        ? 'border-yellow-500 text-yellow-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    📦 Phiếu Nhập Hàng
+                  </button>
+                  <button
+                    onClick={() => setKeToanTabIndex(1)}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                      keToanTabIndex === 1
+                        ? 'border-yellow-500 text-yellow-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    💰 Giao Dịch Chi/Thu
+                  </button>
+                </div>
+
+                {/* TAB 0: NHẬP HÀNG */}
+                {keToanTabIndex === 0 && (
+                <div className="space-y-4">
                 {receipts.filter(r => r.accountantId === myAccId && r.status !== 'COMPLETED').map(r => (
                   <div key={r.id} className="bg-white p-5 rounded-2xl shadow-md border border-emerald-100 flex flex-col md:flex-row gap-6 border-l-4 border-l-blue-400">
                     <div className="flex-1">
@@ -869,6 +1229,69 @@ export default function App() {
                      <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
                      <div className="font-medium text-gray-600">Đã hoàn tất mọi chứng từ cần xử lý.</div>
                    </div>
+                )}
+                </div>
+                )}
+
+                {/* TAB 1: CHI/THU TRANSACTIONS */}
+                {keToanTabIndex === 1 && (
+                <div>
+                  <div className="bg-white rounded-2xl shadow-md border border-emerald-100 overflow-hidden">
+                    {/* Get all stores for this accountant */}
+                    {(() => {
+                      const accountantStores = stores.filter(s => s.accountantId === myAccId);
+                      const accountantTransactions = transactions.filter(t =>
+                        accountantStores.some(s => s.id === t.storeId)
+                      );
+
+                      if (accountantTransactions.length === 0) {
+                        return (
+                          <div className="text-center py-16 bg-white rounded-2xl shadow-md border border-emerald-100">
+                            <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <div className="font-medium text-gray-500">Chưa có giao dịch chi/thu nào.</div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+                              <tr>
+                                <th className="p-3">Mã Giao Dịch</th>
+                                <th className="p-3">Loại</th>
+                                <th className="p-3">Cửa Hàng</th>
+                                <th className="p-3">Số Tiền</th>
+                                <th className="p-3">Thời Gian</th>
+                                <th className="p-3">Ghi Chú</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white">
+                              {accountantTransactions.sort((a, b) => b.date.localeCompare(a.date)).map(t => (
+                                <tr key={t.id} className={`hover:bg-gray-50 ${t.type === 'chi' ? 'bg-red-50' : 'bg-green-50'}`}>
+                                  <td className="p-3 font-mono font-bold">{t.id}</td>
+                                  <td className="p-3">
+                                    <span className={`px-2 py-1 rounded text-xs font-medium border ${
+                                      t.type === 'chi'
+                                        ? 'bg-red-100 text-red-700 border-red-300'
+                                        : 'bg-green-100 text-green-700 border-green-300'
+                                    }`}>
+                                      {t.type === 'chi' ? '🔴 Chi' : '🟢 Thu'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-gray-800">{t.storeName}</td>
+                                  <td className="p-3 font-bold">{t.amount.toLocaleString('vi-VN')} ₫</td>
+                                  <td className="p-3 text-gray-600 text-xs">{t.date}</td>
+                                  <td className="p-3 text-gray-600 text-xs max-w-xs truncate">{t.note || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
                 )}
               </div>
             )}
@@ -1041,6 +1464,7 @@ export default function App() {
               </div>
             </div>
 
+
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium"><tr><th className="p-3">Mã Phiếu</th><th className="p-3">Cửa Hàng</th><th className="p-3">Thời Gian</th><th className="p-3">Trạng Thái</th><th className="p-3">Mã ERP</th><th className="p-3 text-center">Thao tác</th></tr></thead>
@@ -1053,15 +1477,7 @@ export default function App() {
                              (!filterAcc || r.accountantId === filterAcc) &&
                              (!filterStartDate || rDate >= filterStartDate) &&
                              (!filterEndDate || rDate <= filterEndDate);
-                  }).sort((a, b) => {
-                      const parseDate = (dateStr) => {
-                        const parts = dateStr.split(' ');
-                        const [year, month, day] = parts[0].split('-').map(Number);
-                        const [hour, min, sec] = parts[1] ? parts[1].split(':').map(Number) : [0, 0, 0];
-                        return new Date(year, month - 1, day, hour, min, sec).getTime();
-                      };
-                      return parseDate(b.date) - parseDate(a.date);
-                  }).map(r => {
+                  }).sort((a, b) => b.id.localeCompare(a.id)).map(r => {
                     const storeName = stores.find(s => s.id === r.storeId)?.name || r.creator;
                     const itemCount = r.items.length;
                     const [dateOnly, timeOnly] = r.date.split(' ');
@@ -1101,6 +1517,148 @@ export default function App() {
               </table>
               {receipts.length === 0 && <div className="p-10 text-center text-gray-400 italic bg-white">Không có dữ liệu phù hợp</div>}
             </div>
+          </div>
+        )}
+
+        {/* =======================
+            TAB SỔ QUỸ (FUND LEDGER)
+        ========================= */}
+        {role === 'SOQUY' && (
+          <div className="bg-white p-6 rounded-2xl shadow-md border border-emerald-100">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Sổ Quỹ (Fund Ledger)</h2>
+                <p className="text-sm text-gray-500 mt-1">Báo cáo giao dịch chi/thu tiền mặt</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {(filterTransactionType) && (
+                  <button onClick={() => { setFilterTransactionType(''); }} className="text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-2 rounded-lg font-medium transition-colors">Xóa bộ lọc</button>
+                )}
+                <button onClick={() => {
+                    let csv = "\uFEFFMã Giao Dịch,Loại,Cửa Hàng,Số Tiền,Thời Gian,Ghi Chú\n";
+                    transactions.forEach(t => csv += `${t.id},${t.type === 'chi' ? 'Chi' : 'Thu'},${t.storeName},${t.amount},${t.date},"${(t.note || '').replace(/"/g, '""')}"\n`);
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `So_Quy_${new Date().toLocaleDateString('vi-VN')}.csv`; a.click();
+                  }} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors text-sm"><Download className="w-4 h-4"/> Xuất Excel</button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Loại giao dịch</label>
+                <select className="p-2 border border-gray-300 rounded bg-white text-sm outline-none" value={filterTransactionType} onChange={e => setFilterTransactionType(e.target.value)}>
+                  <option value="">-- Tất cả --</option>
+                  <option value="chi">Chi (Tiền Ra)</option>
+                  <option value="thu">Thu (Tiền Vào)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+                  <tr>
+                    <th className="p-3">Mã Giao Dịch</th>
+                    <th className="p-3">Loại</th>
+                    <th className="p-3">Cửa Hàng</th>
+                    <th className="p-3">Số Tiền (VNĐ)</th>
+                    <th className="p-3">Thời Gian</th>
+                    <th className="p-3">Ghi Chú</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {transactions.filter(t => {
+                      const matchType = !filterTransactionType || t.type === filterTransactionType;
+                      return matchType;
+                  }).sort((a, b) => b.date.localeCompare(a.date)).map(t => (
+                    <tr key={t.id} className={`hover:bg-gray-50 group ${t.type === 'chi' ? 'bg-red-50' : 'bg-green-50'}`}>
+                      <td className="p-3 font-mono font-bold text-emerald-600">{t.id}</td>
+                      <td className="p-3">
+                        <span className={`px-2.5 py-1 rounded text-xs font-medium border ${
+                          t.type === 'chi'
+                            ? 'bg-red-100 text-red-700 border-red-300'
+                            : 'bg-green-100 text-green-700 border-green-300'
+                        }`}>
+                          {t.type === 'chi' ? '🔴 Chi' : '🟢 Thu'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="text-gray-800 font-medium text-sm">{t.storeName}</div>
+                        <div className="text-gray-500 text-xs mt-0.5">Người ghi: {t.creator}</div>
+                      </td>
+                      <td className="p-3 font-bold text-lg">{t.amount.toLocaleString('vi-VN')}</td>
+                      <td className="p-3">
+                        <div className="text-gray-800 text-sm">{t.date.split(' ')[0]}</div>
+                        <div className="text-gray-500 text-xs mt-0.5">{t.date.split(' ')[1] || 'N/A'}</div>
+                      </td>
+                      <td className="p-3 text-gray-600 text-xs max-w-xs truncate" title={t.note}>{t.note || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {transactions.filter(t => !filterTransactionType || t.type === filterTransactionType).length === 0 && (
+                <div className="p-10 text-center text-gray-400 italic bg-white">Không có dữ liệu phù hợp</div>
+              )}
+            </div>
+
+            {/* Summary Section */}
+            {transactions.length > 0 && (
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                  <div className="text-red-600 text-sm font-medium">Tổng Chi</div>
+                  <div className="text-red-700 font-bold text-lg mt-2">
+                    {transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType))
+                      .reduce((sum, t) => sum + t.amount, 0)
+                      .toLocaleString('vi-VN')} ₫
+                  </div>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <div className="text-green-600 text-sm font-medium">Tổng Thu</div>
+                  <div className="text-green-700 font-bold text-lg mt-2">
+                    {transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType))
+                      .reduce((sum, t) => sum + t.amount, 0)
+                      .toLocaleString('vi-VN')} ₫
+                  </div>
+                </div>
+                <div className={`border rounded-lg p-4 text-center ${
+                  (() => {
+                    const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                    const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                    const net = thu - chi;
+                    return net >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200';
+                  })()
+                }`}>
+                  <div className={`text-sm font-medium ${(() => {
+                    const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                    const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                    const net = thu - chi;
+                    return net >= 0 ? 'text-blue-600' : 'text-orange-600';
+                  })()}`}>
+                    Chênh lệch
+                  </div>
+                  <div className={`font-bold text-lg mt-2 ${(() => {
+                    const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                    const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                    const net = thu - chi;
+                    return net >= 0 ? 'text-blue-700' : 'text-orange-700';
+                  })()}`}>
+                    {(() => {
+                      const chi = transactions.filter(t => t.type === 'chi' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                      const thu = transactions.filter(t => t.type === 'thu' && (!filterTransactionType || t.type === filterTransactionType)).reduce((sum, t) => sum + t.amount, 0);
+                      const net = thu - chi;
+                      return (net >= 0 ? '+' : '') + net.toLocaleString('vi-VN');
+                    })()} ₫
+                  </div>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                  <div className="text-purple-600 text-sm font-medium">Tổng giao dịch</div>
+                  <div className="text-purple-700 font-bold text-lg mt-2">
+                    {transactions.filter(t => !filterTransactionType || t.type === filterTransactionType).length}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
