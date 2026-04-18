@@ -132,7 +132,15 @@ export const validateLogin = (role: UserRole, username: string, password: string
   };
 
   if (role === 'store_manager') {
-    const store = stores[username.toLowerCase()];
+    // Map display names to store keys
+    const displayToKey: Record<string, string> = {
+      'Phước Long': 'phuoc-long',
+      'Phú Sơn': 'phu-son',
+      'BomBo': 'bombo',
+    };
+
+    const key = displayToKey[username] || username.toLowerCase().replace(/\s+/g, '-');
+    const store = stores[key];
     if (store && store.password === password) {
       return {
         id: store.id,

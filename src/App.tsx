@@ -954,7 +954,7 @@ export default function App() {
               // Determine which tabs to show based on user role
               let visibleTabs: string[] = [];
               if (loginUser?.role === 'admin') {
-                visibleTabs = ['TRACKING', 'SOQUY', 'SETTINGS'];
+                visibleTabs = ['TRACKING', 'SOQUY', 'QUANLYTAIKHOAN', 'SETTINGS'];
               } else if (loginUser?.role === 'accountant') {
                 visibleTabs = ['KETOAN', 'TRACKING', 'SOQUY', 'SETTINGS'];
               } else if (loginUser?.role === 'store_manager') {
@@ -969,7 +969,7 @@ export default function App() {
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${role === r ? 'bg-yellow-400 text-emerald-900 shadow-lg scale-105' : 'text-white hover:bg-white/20'}`}
                   onClick={() => setRole(r)}
                 >
-                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : 'KẾ TOÁN'}
+                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : r === 'QUANLYTAIKHOAN' ? 'QUẢN LÝ TÀI KHOẢN' : 'KẾ TOÁN'}
                 </button>
               ));
             })()}
@@ -2024,6 +2024,160 @@ export default function App() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* QUẢN LÝ TÀI KHOẢN TAB - ADMIN ONLY */}
+        {role === 'QUANLYTAIKHOAN' && loginUser?.role === 'admin' && (
+          <div className="max-w-6xl mx-auto p-6">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-xl shadow-lg">
+                <UserPlus className="w-6 h-6"/>
+                <div>
+                  <h2 className="text-2xl font-bold">Quản Lý Tài Khoản</h2>
+                  <p className="text-sm text-blue-100">Quản lý tài khoản kế toán, cửa hàng và cung ứng</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Quản lý Kế toán */}
+                <div className="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden flex flex-col">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2"><UserPlus className="w-5 h-5"/> Kế Toán</h3>
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="space-y-3 mb-6">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Tên nhân viên</label>
+                        <input type="text" placeholder="Nguyễn Thị Hoa" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={newAccName} onChange={e => setNewAccName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Mật khẩu</label>
+                        <input type="password" placeholder="Nhập mật khẩu" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm" value={newAccPwd} onChange={e => setNewAccPwd(e.target.value)} />
+                      </div>
+                      <button onClick={handleAddAccountant} className="w-full py-2.5 mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2">
+                        <Plus className="w-4 h-4"/> Thêm Mới
+                      </button>
+                    </div>
+
+                    <div className="border-t pt-4 flex-1">
+                      <h4 className="text-xs font-bold text-gray-600 mb-3 uppercase">Danh sách ({accountants.length})</h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {accountants.map(a => (
+                          <div key={a.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-start justify-between group hover:bg-blue-100 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-gray-800 text-sm truncate">{a.name}</div>
+                              <div className="text-xs text-gray-600 font-mono mt-1">{a.id}</div>
+                            </div>
+                            <button onClick={() => deleteDoc(getPublicDoc('accountants', a.id))} className="text-gray-400 hover:text-red-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 className="w-4 h-4"/>
+                            </button>
+                          </div>
+                        ))}
+                        {accountants.length === 0 && <div className="text-center text-gray-400 text-sm py-6">Chưa có kế toán</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quản lý Cửa hàng */}
+                <div className="bg-white rounded-2xl shadow-lg border border-amber-100 overflow-hidden flex flex-col">
+                  <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2"><MapPin className="w-5 h-5"/> Cửa Hàng</h3>
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="space-y-3 mb-6">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Tên cửa hàng</label>
+                        <input type="text" placeholder="Cửa hàng ABC" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 text-sm" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Kế toán phụ trách</label>
+                        <select className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 bg-white text-sm" value={newStoreAccId} onChange={e => setNewStoreAccId(e.target.value)}>
+                          <option value="">-- Chọn kế toán --</option>
+                          {accountants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-2 block">Mật khẩu</label>
+                        <input type="password" placeholder="Nhập mật khẩu" className="w-full p-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 text-sm" value={newStorePwd} onChange={e => setNewStorePwd(e.target.value)} />
+                      </div>
+                      <button onClick={handleAddStore} className="w-full py-2.5 mt-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2">
+                        <Plus className="w-4 h-4"/> Thêm Mới
+                      </button>
+                    </div>
+
+                    <div className="border-t pt-4 flex-1">
+                      <h4 className="text-xs font-bold text-gray-600 mb-3 uppercase">Danh sách ({stores.length})</h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {stores.map(s => {
+                          const assignedAcc = accountants.find(a => a.id === s.accountantId);
+                          return (
+                            <div key={s.id} className="p-3 bg-amber-50 rounded-lg border border-amber-200 group hover:bg-amber-100 transition-colors">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-gray-800 text-sm truncate">{s.name}</div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {assignedAcc ? (
+                                      <span>📊 Kế toán: <strong>{assignedAcc.name}</strong></span>
+                                    ) : (
+                                      <span className="text-red-500">⚠️ Chưa gán kế toán</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <button onClick={() => deleteDoc(getPublicDoc('stores', s.id))} className="text-gray-400 hover:text-red-600 ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Trash2 className="w-4 h-4"/>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {stores.length === 0 && <div className="text-center text-gray-400 text-sm py-6">Chưa có cửa hàng</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Điều chỉnh gán Kế toán cho Cửa hàng */}
+                <div className="bg-white rounded-2xl shadow-lg border border-green-100 overflow-hidden flex flex-col">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2"><UserPlus className="w-5 h-5"/> Điều Chỉnh Gán</h3>
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <p className="text-xs text-gray-600 mb-4">Phân bổ lại kế toán cho cửa hàng</p>
+
+                    <div className="space-y-4 flex-1">
+                      {stores.map(s => (
+                        <div key={s.id} className="p-3 border border-green-200 rounded-lg bg-green-50">
+                          <label className="text-xs font-semibold text-gray-700 block mb-2">{s.name}</label>
+                          <select
+                            value={s.accountantId || ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                updateDoc(getPublicDoc('stores', s.id), { accountantId: e.target.value });
+                              }
+                            }}
+                            className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
+                          >
+                            <option value="">-- Chọn kế toán --</option>
+                            {accountants.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                          </select>
+                          <div className="mt-2 p-2 bg-white rounded text-xs text-gray-600">
+                            {s.accountantId ? (
+                              <span>✓ Gán: <strong>{accountants.find(a => a.id === s.accountantId)?.name}</strong></span>
+                            ) : (
+                              <span className="text-red-500">✗ Chưa gán</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {stores.length === 0 && <div className="text-center text-gray-400 text-sm py-6">Tạo cửa hàng trước</div>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
