@@ -232,6 +232,21 @@ export default function App() {
         const userData = JSON.parse(loginData);
         setLoginUser(userData);
         setIsLoggedIn(true);
+
+        // Auto-navigate and setup based on role
+        if (userData.role === 'store_manager') {
+          setRole('CUAHANG');
+          // Auto-login to store
+          const storeId = userData.storeIds?.[0];
+          if (storeId) {
+            setMyStoreId(storeId);
+            setIsStoreAuth(true);
+          }
+        } else if (userData.role === 'accountant') {
+          setRole('KETOAN');
+        } else if (userData.role === 'admin') {
+          setRole('TRACKING');
+        }
       } catch (e) {
         localStorage.removeItem('loginData');
       }
@@ -326,6 +341,22 @@ export default function App() {
     setLoginUsername('');
     setLoginPassword('');
     showToast(`✅ Đăng nhập thành công! Xin chào ${validatedUser.name}`);
+
+    // Auto-navigate based on role
+    if (validatedUser.role === 'store_manager') {
+      setRole('CUAHANG');
+      // Auto-login to store
+      const storeId = validatedUser.storeIds?.[0];
+      if (storeId) {
+        const storeName = stores.find(s => s.id === storeId)?.name || '';
+        setMyStoreId(storeId);
+        setIsStoreAuth(true);
+      }
+    } else if (validatedUser.role === 'accountant') {
+      setRole('KETOAN');
+    } else if (validatedUser.role === 'admin') {
+      setRole('TRACKING');
+    }
   };
 
   const handleLogout = () => {
@@ -335,6 +366,8 @@ export default function App() {
     setLoginUsername('');
     setLoginPassword('');
     setLoginError('');
+    setRole('CUAHANG');
+    setIsStoreAuth(false);
     localStorage.removeItem('loginData');
     showToast('✅ Đã đăng xuất!');
   };
@@ -902,16 +935,6 @@ export default function App() {
                   Đăng Nhập
                 </button>
               </div>
-
-              {/* Demo Credentials */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-xs text-gray-600 font-medium mb-3">📝 Tài khoản demo:</p>
-                <div className="space-y-2 text-xs text-gray-600">
-                  <div><span className="font-medium">Admin:</span> admin / admin123</div>
-                  <div><span className="font-medium">Kế toán:</span> Sang, Minh, Yến / 123</div>
-                  <div><span className="font-medium">Cửa hàng:</span> Phước Long, Phú Sơn, BomBo / 123</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -927,15 +950,29 @@ export default function App() {
             KN-Logistics
           </h1>
           <div className="flex overflow-x-auto hide-scrollbar bg-white/10 backdrop-blur-sm rounded-xl p-1.5 space-x-1 border border-white/20">
-            {['CUAHANG', 'KETOAN', 'CUNGUNG', 'TRACKING', 'SOQUY', 'SETTINGS'].map(r => (
-              <button
-                key={r}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${role === r ? 'bg-yellow-400 text-emerald-900 shadow-lg scale-105' : 'text-white hover:bg-white/20'}`}
-                onClick={() => setRole(r)}
-              >
-                {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : 'KẾ TOÁN'}
-              </button>
-            ))}
+            {(() => {
+              // Determine which tabs to show based on user role
+              let visibleTabs: string[] = [];
+              if (loginUser?.role === 'admin') {
+                visibleTabs = ['TRACKING', 'SOQUY', 'SETTINGS'];
+              } else if (loginUser?.role === 'accountant') {
+                visibleTabs = ['KETOAN', 'TRACKING', 'SOQUY', 'SETTINGS'];
+              } else if (loginUser?.role === 'store_manager') {
+                visibleTabs = ['CUAHANG', 'SETTINGS'];
+              } else {
+                visibleTabs = ['CUNGUNG', 'TRACKING', 'SETTINGS'];
+              }
+
+              return visibleTabs.map(r => (
+                <button
+                  key={r}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${role === r ? 'bg-yellow-400 text-emerald-900 shadow-lg scale-105' : 'text-white hover:bg-white/20'}`}
+                  onClick={() => setRole(r)}
+                >
+                  {r === 'SETTINGS' ? 'CÀI ĐẶT' : r === 'TRACKING' ? 'THEO DÕI' : r === 'SOQUY' ? 'SỔ QUỸ' : r === 'CUNGUNG' ? 'HÓA ĐƠN' : r === 'CUAHANG' ? 'CỬA HÀNG' : 'KẾ TOÁN'}
+                </button>
+              ));
+            })()}
           </div>
           {/* RELOAD DATA BUTTON */}
           <button
